@@ -1,7 +1,7 @@
 # ZilpioWebUi
 
 <p align="center">
-  <strong>A local, LAN-accessible WebUI for the real Codex app-server.</strong>
+  <strong>Work with multiple Codex accounts from your browser, on a remote VPS, server, or PC.</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 > [!IMPORTANT]
 > This is an **unofficial community project**. It is not affiliated with, endorsed by, or maintained by OpenAI. OpenAI and Codex are trademarks of their respective owners.
 
-ZilpioWebUi connects directly to `codex app-server --stdio` and exposes the local Codex experience through a responsive browser interface. It keeps real threads, models, streaming responses, tool activity, approval requests, diffs, and token usage instead of simulating them in a static frontend.
+ZilpioWebUi lets anyone work with multiple Codex accounts through a browser, whether Codex runs on a remote VPS, a server, or a PC. It connects directly to `codex app-server --stdio` and provides real threads, models, streaming responses, tool activity, approval requests, diffs, and token usage. For remote access, use a secure connection; do not expose the application directly to the public Internet.
 
 
 ## Highlights

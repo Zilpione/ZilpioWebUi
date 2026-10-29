@@ -1,7 +1,7 @@
 # ZilpioWebUi
 
 <p align="center">
-  <strong>由真实 Codex app-server 驱动、可在局域网访问的本地 WebUI。</strong>
+  <strong>通过浏览器使用多个 Codex 账户，在远程 VPS、服务器或电脑上工作。</strong>
 </p>
 
 <p align="center">
@@ -20,7 +20,7 @@
 > [!IMPORTANT]
 > 这是一个**非官方社区项目**，与 OpenAI 没有隶属、背书或维护关系。OpenAI、Codex 及相关标识归其各自权利人所有。
 
-ZilpioWebUi 直接连接 `codex app-server --stdio`，通过响应式浏览器界面提供本地 Codex 体验。模型列表、历史会话、流式回答、工具活动、审批请求、Diff 和 Token 使用量均来自真实 app-server，而不是前端静态模拟。
+ZilpioWebUi 让任何人都能通过浏览器使用多个 Codex 账户，无论 Codex 运行在远程 VPS、服务器还是电脑上。它直接连接 `codex app-server --stdio`，提供真实会话、模型、流式回答、工具活动、审批请求、Diff 和 Token 使用量。远程访问时请使用安全连接，不要将应用直接暴露到公共互联网。
 
 
 ## 主要功能
