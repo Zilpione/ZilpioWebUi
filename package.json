@@ -3,9 +3,9 @@
   "version": "0.2.0",
   "private": true,
   "license": "MIT",
-  "repository": "github:Zilpione/ZilpioWebUi",
-  "bugs": "https://github.com/Zilpione/ZilpioWebUi/issues",
-  "homepage": "https://github.com/Zilpione/ZilpioWebUi#readme",
+  "repository": "github:lezi-fun/codex-webui",
+  "bugs": "https://github.com/lezi-fun/codex-webui/issues",
+  "homepage": "https://github.com/lezi-fun/codex-webui#readme",
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",

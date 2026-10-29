@@ -1,7 +1,7 @@
-# ZilpioWebUi
+# Codex WebUI
 
 <p align="center">
-  <strong>通过浏览器使用多个 Codex 账户，在远程 VPS、服务器或电脑上工作。</strong>
+  <strong>由真实 Codex app-server 驱动、可在局域网访问的本地 WebUI。</strong>
 </p>
 
 <p align="center">
@@ -11,17 +11,18 @@
 </p>
 
 <p align="center">
-  <a href="./LICENSE"><img alt="MIT 许可证" src="https://img.shields.io/github/license/Zilpione/ZilpioWebUi?style=flat-square"></a>
-  <a href="https://github.com/Zilpione/ZilpioWebUi/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/Zilpione/ZilpioWebUi?style=flat-square"></a>
-  <a href="https://github.com/Zilpione/ZilpioWebUi/issues"><img alt="GitHub Issues" src="https://img.shields.io/github/issues/Zilpione/ZilpioWebUi?style=flat-square"></a>
+  <a href="./LICENSE"><img alt="MIT 许可证" src="https://img.shields.io/github/license/lezi-fun/codex-webui?style=flat-square"></a>
+  <a href="https://github.com/lezi-fun/codex-webui/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/lezi-fun/codex-webui?style=flat-square"></a>
+  <a href="https://github.com/lezi-fun/codex-webui/issues"><img alt="GitHub Issues" src="https://img.shields.io/github/issues/lezi-fun/codex-webui?style=flat-square"></a>
   <a href="https://bun.sh/"><img alt="Bun 1.3 或更高版本" src="https://img.shields.io/badge/Bun-1.3%2B-fbf0df?style=flat-square&amp;logo=bun&amp;logoColor=000"></a>
 </p>
 
 > [!IMPORTANT]
 > 这是一个**非官方社区项目**，与 OpenAI 没有隶属、背书或维护关系。OpenAI、Codex 及相关标识归其各自权利人所有。
 
-ZilpioWebUi 让任何人都能通过浏览器使用多个 Codex 账户，无论 Codex 运行在远程 VPS、服务器还是电脑上。它直接连接 `codex app-server --stdio`，提供真实会话、模型、流式回答、工具活动、审批请求、Diff 和 Token 使用量。远程访问时请使用安全连接，不要将应用直接暴露到公共互联网。
+Codex WebUI 直接连接 `codex app-server --stdio`，通过响应式浏览器界面提供本地 Codex 体验。模型列表、历史会话、流式回答、工具活动、审批请求、Diff 和 Token 使用量均来自真实 app-server，而不是前端静态模拟。
 
+![Codex WebUI 桌面截图](./docs/assets/overview.png)
 
 ## 主要功能
 
@@ -63,8 +64,8 @@ codex
 ## 快速开始
 
 ```bash
-git clone https://github.com/Zilpione/ZilpioWebUi.git
-cd ZilpioWebUi
+git clone https://github.com/lezi-fun/codex-webui.git
+cd codex-webui
 bun install
 bun run start
 ```
@@ -85,7 +86,7 @@ http://127.0.0.1:8899
 HOST=0.0.0.0 bun run start
 ```
 
-首个通过局域网访问的浏览器会看到密码设置页。确认至少 12 个字符的密码后，ZilpioWebUi 只把加盐后的 `scrypt` 凭据保存在 `~/.codex/codex-webui-auth.json`，并立即登录当前浏览器；服务重启后会显示普通登录页。由于第一个可访问该地址的局域网客户端拥有初始化权，请只在可信网络中完成首次设置。
+首个通过局域网访问的浏览器会看到密码设置页。确认至少 12 个字符的密码后，Codex WebUI 只把加盐后的 `scrypt` 凭据保存在 `~/.codex/codex-webui-auth.json`，并立即登录当前浏览器；服务重启后会显示普通登录页。由于第一个可访问该地址的局域网客户端拥有初始化权，请只在可信网络中完成首次设置。
 
 无人值守部署也可以在启动时直接指定密码：
 
@@ -129,7 +130,7 @@ bun run start
 
 ## 安全模型
 
-ZilpioWebUi 可以在本机批准执行命令和修改文件，应把它视为拥有 Shell 能力的本地开发工具。
+Codex WebUI 可以在本机批准执行命令和修改文件，应把它视为拥有 Shell 能力的本地开发工具。
 
 - 不要把 `8899` 端口直接暴露到公网。
 - 默认只监听 `127.0.0.1`。监听非 localhost 地址时，必须先完成首次密码设置，或配置 `CODEX_WEBUI_PASSWORD` / `CODEX_WEBUI_ACCESS_TOKEN`，受保护的 HTTP 与 WebSocket 请求才会放行。

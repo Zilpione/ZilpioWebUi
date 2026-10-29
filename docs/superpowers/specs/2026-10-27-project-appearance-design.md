@@ -1,0 +1,6 @@
+# Project appearance and removal
+User requests project removal, colors and icons. User explicitly chose removal from the list while preserving files and chats. No recursive filesystem deletion and no conversation deletion.
+
+Persist per-project metadata (canonical folder path, color, allowlisted icon, hidden flag) in existing .webui/projects.json, shared across accounts/environments/browsers. Projects remain actual folders. Register new projects and explicitly selected folders; existing thread folders can be styled without moving data. Display registered visible projects even before first chat. Hidden project conversations remain accessible under Altre chat, keeping original cwd. Explicit folder selection or Restore re-adds a removed project. Color/icon stable across reload and environment change.
+
+UI: project row ellipsis opens settings dialog with color/icon controls, save and Rimuovi dall'elenco (copy explicitly preserves data); Gestisci progetti in folder picker includes removed projects with Ripristina. Backend GET/POST/PATCH/DELETE /api/projects; DELETE only sets hidden metadata. Authenticate and restrict all paths to project roots. Keep account/history directories outside allowed roots. Metadata update events refresh connected clients without runtime restart.

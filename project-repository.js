@@ -112,7 +112,7 @@ export async function commitRepository(path, message) {
 }
 export async function commitAndPush(path, message) {
  await commitRepository(path, message);
- try { await command('git', ['push'], path); }
+ try { await command('git', ['push'], path); } 
  catch { throw new Error('Commit creato, ma push non riuscito. Controlla il remote e riprova il push.'); }
  try { await fetchRepository(path); } catch {}
 }
