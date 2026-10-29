@@ -65,4 +65,8 @@ export class GlobalIntegrations {
     const chatName = typeof params?.chatName === 'string' && params.chatName.trim() ? `\nChat: ${params.chatName.trim()}` : '';
     await this.send(`Job Codex ${status}${thread}${chatName}`, fetcher);
   }
+  async notifyLogin(fetcher = fetch) {
+    if (!this.telegram().enabled) return;
+    await this.send('NUOVO LOGIN SU CODEX ZILPIOWEB RILEVATO!', fetcher);
+  }
 }

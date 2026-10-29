@@ -20,7 +20,7 @@ beforeAll(() => {
   mkdirSync(fixture, { recursive: true });
   git("init", "-q");
   git("config", "user.name", "Codex WebUI Test");
-  git("config", "user.email", "codex-webui\x40test.invalid");
+  git("config", "user.email", "codex-webui@test.invalid");
   writeFileSync(file, "before\n");
   git("add", "sample.txt");
   git("commit", "-qm", "initial");

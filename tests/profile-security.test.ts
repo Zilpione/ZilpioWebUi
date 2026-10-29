@@ -20,7 +20,7 @@ describe("account profile security", () => {
       type: "chatgpt",
       displayName: "Profile Name",
       imageUrl: "https://cdn.auth0.com/avatars/pn.png",
-      email: "private\x40example.com",
+      email: "private@example.com",
       planType: "plus",
       initials: "PN",
     });
@@ -31,13 +31,13 @@ describe("account profile security", () => {
       planType: "plus",
       initials: "PN",
     });
-    expect(JSON.stringify(result)).not.toContain("private\x40example.com");
+    expect(JSON.stringify(result)).not.toContain("private@example.com");
     expect(JSON.stringify(result)).not.toContain("cdn.auth0.com");
     expect(toPublicAccountIdentity({
       type: "chatgpt",
-      displayName: "private\x40example.com",
+      displayName: "private@example.com",
       imageUrl: null,
-      email: "private\x40example.com",
+      email: "private@example.com",
       planType: "plus",
       initials: "PR",
     }).displayName).toBe("Profile");

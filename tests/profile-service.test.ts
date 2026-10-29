@@ -56,21 +56,21 @@ describe("Codex account profile", () => {
 
   test("follows the Desktop fallback order for account labels", () => {
     expect(buildAccountIdentity(
-      { account: { type: "chatgpt", email: "person\x40example.com", planType: "plus" }, requiresOpenaiAuth: true },
+      { account: { type: "chatgpt", email: "person@example.com", planType: "plus" }, requiresOpenaiAuth: true },
       { displayName: "Profile Name", imageUrl: "https://cdn.auth0.com/avatars/test.png", username: "profile" },
     )).toEqual({
       type: "chatgpt",
       displayName: "Profile Name",
       imageUrl: "https://cdn.auth0.com/avatars/test.png",
-      email: "person\x40example.com",
+      email: "person@example.com",
       planType: "plus",
       initials: "PN",
     });
 
     expect(buildAccountIdentity(
-      { account: { type: "chatgpt", email: "person\x40example.com", planType: "plus" }, requiresOpenaiAuth: true },
+      { account: { type: "chatgpt", email: "person@example.com", planType: "plus" }, requiresOpenaiAuth: true },
       null,
-    ).displayName).toBe("person\x40example.com");
+    ).displayName).toBe("person@example.com");
     expect(buildAccountIdentity({ account: { type: "apiKey" }, requiresOpenaiAuth: true }, null).displayName).toBe("API key");
     expect(buildAccountIdentity({ account: null, requiresOpenaiAuth: true }, null).displayName).toBe("Settings");
   });

@@ -5,12 +5,24 @@ const kinds = [
  ['untracked', '?', 'File nuovi non tracciati'],
 ];
 
-export function initProjectChanges({ list, document: doc = document, fetch: request = fetch, window: win = window }) {
+export function initProjectChanges({ list, document: doc = document, fetch: request = fetch, window: win = window, onPull = () => {}, onChange = () => {} }) {
  const cache = new Map(), pending = new Set();
- function paint(path, changes) {
+ function paint(path, changes, sync) {
   for (const section of list.querySelectorAll('.sidebar-project-group')) {
    if (section.dataset.project !== path) continue;
    const heading = section.querySelector('.sidebar-project-row');
+   let warning = section.querySelector('.project-fetch-warning');
+   if (!warning) {
+    warning = doc.createElement('button');
+    warning.type = 'button';
+    warning.className = 'project-fetch-warning';
+    warning.textContent = '⚠';
+    heading.after(warning);
+   }
+   warning.onclick = event => { event.stopPropagation(); onPull(path, sync); };
+   warning.hidden = !(sync?.behind > 0);
+   warning.title = `${sync?.behind || 0} commit da scaricare`;
+   warning.setAttribute('aria-label', warning.title);
    let badges = section.querySelector('.project-changes');
    if (!badges) {
     badges = doc.createElement('button');
@@ -44,13 +56,14 @@ export function initProjectChanges({ list, document: doc = document, fetch: requ
   const error = doc.createElement('p'); error.className = 'project-diff-error'; error.setAttribute('role', 'alert');
   const files = doc.createElement('div'); files.className = 'project-diff-files';
   const input = doc.createElement('input'); input.placeholder = 'Messaggio del commit'; input.setAttribute('aria-label', 'Messaggio del commit');
-  const commit = doc.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit e push';
+  const commit = doc.createElement('button'); commit.type = 'button'; commit.textContent = 'Commit';
+  const commitPush = doc.createElement('button'); commitPush.type = 'button'; commitPush.textContent = 'Commit e push';
   const branch = doc.createElement('span'); branch.className = 'project-diff-branch';
-  const footer = doc.createElement('footer'); footer.append(input, branch, commit);
+  const footer = doc.createElement('footer'); footer.append(input, branch, commit, commitPush);
   dialog.append(header, subtitle, error, files, footer); doc.body.append(dialog);
   dialog.addEventListener('close', () => dialog.remove());
-  async function api(method, body) {
-   const response = await request(`/api/projects/changes/detail${method === 'GET' ? '?path=' + encodeURIComponent(path) : ''}`, method === 'GET' ? { cache: 'no-store' } : { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path, ...body }) });
+  async function api(method, body, endpoint = '/api/projects/changes/detail') {
+   const response = await request(`${endpoint}${method === 'GET' ? '?path=' + encodeURIComponent(path) : ''}`,  method === 'GET' ? { cache: 'no-store' } : { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ path, ...body }) });
    const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Operazione Git non riuscita'); return data;
   }
   async function load() {
@@ -74,10 +87,12 @@ export function initProjectChanges({ list, document: doc = document, fetch: requ
      }
      row.append(name, discard); section.append(row, diff); files.append(section);
     }
-    commit.disabled = !data.files.length;
-   } catch (e) { files.textContent = ''; error.textContent = e.message; commit.disabled = true; }
+    commit.disabled = commitPush.disabled = !data.files.length;
+   } catch (e) { files.textContent = ''; error.textContent = e.message; commit.disabled = commitPush.disabled = true; }
   }
-  commit.onclick = async () => { if (!input.value.trim()) { error.textContent = 'Inserisci un messaggio di commit.'; input.focus(); return; } commit.disabled = true; try { await api('POST', { message: input.value }); cache.delete(path); await load(); void refresh(); input.value = ''; } catch (e) { error.textContent = e.message; cache.delete(path); void refresh(); commit.disabled = false; } };
+  const submit = async push => { if (!input.value.trim()) { error.textContent = 'Inserisci un messaggio di commit.'; input.focus(); return; } commit.disabled = commitPush.disabled = true; try { await api('POST', { message: input.value }, push ? '/api/projects/changes/detail' : '/api/projects/commit'); cache.delete(path); await load(); void refresh(); onChange(); input.value = ''; } catch (e) { error.textContent = e.message; cache.delete(path); void refresh(); onChange(); commit.disabled = commitPush.disabled = false; } };
+  commit.onclick = () => submit(false);
+  commitPush.onclick = () => submit(true);
   dialog.showModal(); await load();
  }
  async function refresh() {
@@ -86,15 +101,15 @@ export function initProjectChanges({ list, document: doc = document, fetch: requ
   for (const path of cache.keys()) if (!paths.has(path)) cache.delete(path);
   await Promise.all([...paths].map(async path => {
    const cached = cache.get(path);
-   paint(path, cached?.changes);
+   paint(path, cached?.changes, cached?.sync);
    if (pending.has(path) || cached && Date.now() - cached.time < 5000) return;
    pending.add(path);
    try {
     const response = await request(`/api/projects/changes?path=${encodeURIComponent(path)}`, { cache: 'no-store' });
     if (!response.ok) throw new Error('Stato Git non disponibile');
-    const { changes } = await response.json();
-    cache.set(path, { changes, time: Date.now() });
-    paint(path, changes);
+    const { changes, sync } = await response.json();
+    cache.set(path, { changes, sync, time: Date.now() });
+    paint(path, changes, sync);
    } catch {
     cache.delete(path);
     paint(path, null);
@@ -108,5 +123,5 @@ export function initProjectChanges({ list, document: doc = document, fetch: requ
  doc.addEventListener('visibilitychange', onFocus);
  const timer = win.setInterval(onFocus, 10000);
  void refresh();
- return { refresh, destroy() { observer.disconnect(); win.clearInterval(timer); win.removeEventListener('focus', onFocus); doc.removeEventListener('visibilitychange', onFocus); } };
+ return { refresh, openChanges, destroy() { observer.disconnect(); win.clearInterval(timer); win.removeEventListener('focus', onFocus); doc.removeEventListener('visibilitychange', onFocus); } };
 }

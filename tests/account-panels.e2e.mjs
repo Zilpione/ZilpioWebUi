@@ -8,17 +8,17 @@ import { launchOptions } from './browser-runtime.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const temp = mkdtempSync(join(tmpdir(), 'webui-account-panels-'));
-const home = join(temp, 'home'), bin = join(temp, 'bin'), codexHome = join(home, '.codex'), project = join(home, 'legacy', 'project'), log = join(temp, 'calls.jsonl');
+const home = join(temp, 'home'), bin = join(temp, 'bin'), codexHome = join(home, '.codex'), project = join(home, 'el', 'project'), log = join(temp, 'calls.jsonl');
 for (const path of [bin, codexHome, project]) mkdirSync(path, { recursive: true });
 const auth = id => ({ tokens: { account_id: id, access_token: id + '-access', refresh_token: id + '-refresh', id_token: 'x.' + Buffer.from(JSON.stringify({ email: id + '@example.invalid', 'https://api.openai.com/auth': { chatgpt_account_id: id, chatgpt_plan_type: 'plus' } })).toString('base64url') + '.x' } });
 writeFileSync(join(codexHome, 'auth.json'), JSON.stringify(auth('initial')));
 writeFileSync(join(codexHome, 'config.toml'), 'model = "gpt-a"\n');
-const store = new AccountStore({ defaultHome: codexHome, loginsDir: join(home, '.codex-logins'), stateDir: join(home, '.webui'), workspaces: [{ id: 'legacy', label: 'legacy', path: join(home, 'legacy'), codexHome: join(home, '.legacy') }, { id: 'workspace', label: 'workspace', path: join(home, 'workspace'), codexHome: join(home, '.workspace') }] });
+const store = new AccountStore({ defaultHome: codexHome, loginsDir: join(home, '.codex-logins'), stateDir: join(home, '.webui'), workspaces: [{ id: 'El', label: 'El', path: join(home, 'el'), codexHome: join(home, '.El') }, { id: 'zilpio', label: 'zilpio', path: join(home, 'zilpio'), codexHome: join(home, '.zilpio') }] });
 store.prepare(); store.addAuth(auth('second'), 'Second account');
-// Seed a former legacy chat and project before starting the upgraded server.
-const legacyHome=join(home,'.legacy');mkdirSync(join(legacyHome,'sessions'),{recursive:true});
-writeFileSync(join(legacyHome,'sessions','rollout-legacy-history.jsonl'),JSON.stringify({id:'legacy-history',name:'Chat migrata da legacy',cwd:project,turns:[],canAcceptDirectInput:true}));
-writeFileSync(join(home,'.webui','projects.json.legacy'),JSON.stringify([{path:project,color:'#ff0000',icon:'star',hidden:false}]));
+// Seed a former El chat and project before starting the upgraded server.
+const elHome=join(home,'.El');mkdirSync(join(elHome,'sessions'),{recursive:true});
+writeFileSync(join(elHome,'sessions','rollout-el-history.jsonl'),JSON.stringify({id:'el-history',name:'Chat migrata da El',cwd:project,turns:[],canAcceptDirectInput:true}));
+writeFileSync(join(home,'.webui','projects.json.El'),JSON.stringify([{path:project,color:'#ff0000',icon:'star',hidden:false}]));
 writeFileSync(join(bin, 'codex'), String.raw`#!/usr/bin/env bun
 import {createInterface} from 'node:readline';
 import {readFileSync,writeFileSync,appendFileSync,existsSync,mkdirSync,readdirSync} from 'node:fs';
@@ -63,26 +63,26 @@ let server = startServer(), browser, stage = 'server startup'; const errors = []
 try {
  for (let i = 0; i < 200; i++) { try { if ((await (await fetch(base + '/api/health')).json()).codex) break; } catch {} if (i === 199) throw new Error('Server did not become ready'); await Bun.sleep(50); }
  const runtime = await (await fetch(base + '/api/runtime')).json(), secondId = runtime.accounts.find(a => a.id !== 'default').id;
- if(JSON.stringify(runtime.environments)!==JSON.stringify([{id:'workspace',label:'Workspace'}]))throw new Error('Unexpected environments: '+JSON.stringify(runtime.environments));
+ if(JSON.stringify(runtime.environments)!==JSON.stringify([{id:'zilpio',label:'Zilpio'}]))throw new Error('Unexpected environments: '+JSON.stringify(runtime.environments));
  browser = await chromium.launch(launchOptions());
  const context = await browser.newContext({ viewport: { width: 1400, height: 900 } });
  const page = await context.newPage(); page.setDefaultTimeout(8000); const captureErrors = (p, name) => { p.on('pageerror', error => errors.push(name + ': ' + error.message)); p.on('console', message => { if (message.type() === 'error') consoleErrors.push(name + ' console: ' + message.text()); }); }; captureErrors(page, 'first tab');
  stage = 'selecting accounts and models before creating chats';
  await page.goto(base, { waitUntil: 'domcontentloaded' });
  await page.waitForFunction(() => globalThis.__codexWebuiDebug?.state.connected && document.querySelector('#composerAccount')?.options.length === 2);
- await page.waitForSelector('.thread-item[data-id="legacy-history"]');
+ await page.waitForSelector('.thread-item[data-id="el-history"]');
  if(await page.locator('.environment-control').isVisible())throw new Error('Environment selector should be hidden');
- const migratedGroup=page.locator('.sidebar-project-group').filter({has:page.locator('.thread-item[data-id="legacy-history"]')});
+ const migratedGroup=page.locator('.sidebar-project-group').filter({has:page.locator('.thread-item[data-id="el-history"]')});
  if(await migratedGroup.locator('.sidebar-project-row').getAttribute('aria-expanded')==='false')await migratedGroup.locator('.sidebar-project-row').click();
- await page.locator('.thread-item[data-id="legacy-history"] .thread-name').click();
- await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.active?.id==='legacy-history');
+ await page.locator('.thread-item[data-id="el-history"] .thread-name').click();
+ await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.active?.id==='el-history');
  await migratedGroup.locator('.project-settings-button').click();
  if(await migratedGroup.getByText('Sposta workspace',{exact:true}).count())throw new Error('Move environment command should be absent');
  await page.locator('#newTask').click();
  await page.locator('#splitChatButton').click();
  await page.waitForFunction(() => document.querySelector('#secondaryChatFrame')?.contentWindow?.__codexWebuiDebug?.state.connected && document.querySelector('#secondaryChatFrame')?.contentDocument?.querySelector('#composerAccount')?.options.length === 2);
  const secondary = page.frameLocator('#secondaryChatFrame');
- await page.locator('#composerAccountButton').click();await page.locator('#composerAccountMenu [role="option"]').filter({hasText:'initial\x40example.invalid'}).click();
+ await page.locator('#composerAccountButton').click();await page.locator('#composerAccountMenu [role="option"]').filter({hasText:'initial@example.invalid'}).click();
  await secondary.locator('#composerAccountButton').click();await secondary.locator('#composerAccountMenu [role="option"]').filter({hasText:'Second account'}).click();
  await page.locator('#usageBars').getByText('80% residuo').waitFor();
  await secondary.locator('#usageBars').getByText('55% residuo').waitFor();
@@ -133,7 +133,7 @@ try {
  await page.locator('#conversation').getByText('Response from second').waitFor();
  stage = 'switching the same chat back to its original account';
  await page.locator('#composerAccountButton').click();
- await page.locator('#composerAccountMenu [role="option"]').filter({hasText:'initial\x40example.invalid'}).click();
+ await page.locator('#composerAccountMenu [role="option"]').filter({hasText:'initial@example.invalid'}).click();
  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.active?.id==='thread-initial' && globalThis.__codexWebuiDebug.state.selectedAccountId==='default');
  await page.locator('#conversation').getByText('Response from second').waitFor();
  await page.locator('#prompt').fill('Continue back on initial'); await page.locator('#sendButton').click();

@@ -1,4 +1,4 @@
-import { repositoryChanges, repositoryBranch, repositoryDiffs, discardRepositoryChange, commitAndPush, repositoryStatus, listRepositories, assignRepository, detachRepository, pushInitial } from "./project-repository.js";
+import { repositoryChanges, repositorySync, fetchRepository, pullRepository, pushRepository, repositoryBranch, repositoryDiffs, discardRepositoryChange, commitRepository, commitAndPush, repositoryStatus, listRepositories, assignRepository, detachRepository, pushInitial } from "./project-repository.js";
 import { createReadStream, existsSync, readFileSync, mkdirSync, linkSync, statSync, realpathSync, lstatSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join, relative, resolve, extname, dirname, basename } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
@@ -23,6 +23,7 @@ import {
   isAllowedBrowserRpcMethod,
   isAuthorizedHttpRequest,
   isRequestAuthorized,
+  loginDelayMs,
   passwordSessionCookie,
   resolvePublicAsset,
   resolveSafeRegularFile,
@@ -42,7 +43,7 @@ import {
 import { installRollout, rolloutHash } from "./rollout-transfer.js";
 import { ThreadOwnership, ensureSafeDirectory } from "./thread-ownership.js";
 import { AccountStore } from "./account-store.ts";
-import { migrateToWorkspace } from "./workspace-migration.ts";
+import { migrateToZilpio } from "./zilpio-migration.ts";
 import { DeviceLogin } from "./codex-login.ts";
 import { EnvironmentProjectStores, ProjectStore } from "./project-store.ts";
 import { GlobalIntegrations } from "./global-integrations.js";
@@ -60,6 +61,8 @@ const managedPasswordPath = passwordStorePath();
 let managedPassword: StoredPassword | null = environmentPassword || accessToken ? null : loadStoredPassword(managedPasswordPath);
 let authSecret = environmentPassword || accessToken || storedPasswordSessionSecret(managedPassword);
 let passwordSetupInProgress = false;
+let passwordLoginInProgress = false;
+let passwordLoginAttempts = 0;
 const localhostOnly = host === "127.0.0.1" || host === "::1" || host === "localhost";
 const appRoot = existsSync(resolve(import.meta.dir, "public")) ? import.meta.dir : resolve(import.meta.dir, "..");
 const publicDir = resolve(appRoot, "public");
@@ -67,14 +70,14 @@ const homeDir = process.env.HOME || process.cwd();
 const managedAccounts = process.env.CODEX_WEBUI_MANAGED_ACCOUNTS === "true";
 const projectless = !managedAccounts && process.env.CODEX_WEBUI_PROJECTLESS === "true";
 const workspaceBase = resolve(process.env.CODEX_WEBUI_WORKSPACE_BASE || homeDir);
-// Workspace is the only environment. Both mounted project roots remain accessible.
-const projectRoots = [resolve(workspaceBase, "legacy"), resolve(workspaceBase, "workspace")];
+// Zilpio is the only environment. Both mounted project roots remain accessible.
+const projectRoots = [resolve(workspaceBase, "el"), resolve(workspaceBase, "zilpio")];
 if (managedAccounts) for (const path of projectRoots) mkdirSync(path, { recursive: true });
 const workspaces = [
-  { id: "workspace", label: "Workspace", path: projectRoots[1], codexHome: resolve(workspaceBase, ".workspace") },
+  { id: "zilpio", label: "Zilpio", path: projectRoots[1], codexHome: resolve(workspaceBase, ".zilpio") },
 ];
 const defaultCodexHome = resolve(process.env.CODEX_HOME || resolve(homeDir, ".codex"));
-if (managedAccounts) migrateToWorkspace(workspaceBase);
+if (managedAccounts) migrateToZilpio(workspaceBase);
 const accountStore = managedAccounts ? new AccountStore({
   defaultHome: defaultCodexHome,
   loginsDir: resolve(workspaceBase, ".codex-logins"),
@@ -961,6 +964,7 @@ function issueBrowserSession(req: IncomingMessage, res: ServerResponse) {
     "x-content-type-options": "nosniff",
   });
   res.end(JSON.stringify({ ok: true }));
+  integrations.notifyLogin().catch(() => console.error("Telegram login notification failed"));
 }
 
 function encodeContentDispositionFilename(filename: string) {
@@ -1065,7 +1069,7 @@ function sendJson(res: ServerResponse, status: number, data: any) {
 
 // A missing or incomplete ownership index must never make stored conversations disposable.
 function accountHasStoredHistory(accountId: string) {
-  for (const workspace of [...workspaces, {id: "legacy"}]) for (const directory of ["sessions", "archived_sessions"]) {
+  for (const workspace of [...workspaces, {id: "El"}]) for (const directory of ["sessions", "archived_sessions"]) {
     const components = [".webui", "runtime-homes", accountId, workspace.id, directory];
     let path = workspaceBase, missing = false;
     for (const component of components) {
@@ -1209,13 +1213,29 @@ const server = createServer(async (req, res) => {
       sendAuthError(res, 401, "Incorrect password");
       return;
     }
-    const submittedPassword = typeof payload?.password === "string" ? payload.password : "";
-    if (!validBrowserPassword(req, submittedPassword)) {
-      sendAuthError(res, 401, "Incorrect password");
+    if (passwordLoginInProgress) {
+      sendAuthError(res, 400, "Login already in progress");
       return;
     }
-    issueBrowserSession(req, res);
-    return;
+    const delay = loginDelayMs(passwordLoginAttempts);
+    if (delay === null) {
+      sendAuthError(res, 400, "Login attempt limit reached; restart the server");
+      return;
+    }
+    passwordLoginAttempts++;
+    passwordLoginInProgress = true;
+    try {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      const submittedPassword = typeof payload?.password === "string" ? payload.password : "";
+      if (!validBrowserPassword(req, submittedPassword)) {
+        sendAuthError(res, 401, "Incorrect password");
+        return;
+      }
+      issueBrowserSession(req, res);
+      return;
+    } finally {
+      passwordLoginInProgress = false;
+    }
   }
   if (!isAuthorizedHttpRequest(req, authSecret)) {
     if (appRoute || loginAssets.has(url.pathname)) {
@@ -1518,8 +1538,49 @@ const server = createServer(async (req, res) => {
       const input = url.searchParams.get("path");
       if (!input) throw new Error("Progetto non valido");
       const path = resolveBrowsePath(input, browseRoots, homeDir);
-      return sendJson(res, 200, { changes: await repositoryChanges(path) });
+      const changes = await repositoryChanges(path);
+      return sendJson(res, 200, { changes, sync: changes ? await repositorySync(path) : null });
     } catch (error: any) { return sendJson(res, 400, { error: error.message || "Stato Git non disponibile" }); }
+  }
+  if (url.pathname === "/api/projects/fetch" && req.method === "POST") {
+    try {
+      const data = await readJsonBody(req, 4096);
+      if (typeof data.path !== "string") throw new Error("Progetto non valido");
+      const path = resolveBrowsePath(data.path, browseRoots, homeDir);
+      if (!currentProjectStore().list().some(p => p.path === path && !p.hidden)) throw new Error("Progetto non registrato");
+      await fetchRepository(path);
+      return sendJson(res, 200, { ok: true });
+    } catch { return sendJson(res, 400, { error: "Fetch non riuscito" }); }
+  }
+  if (url.pathname === "/api/projects/pull" && req.method === "POST") {
+    try {
+      const data = await readJsonBody(req, 4096);
+      if (typeof data.path !== "string") throw new Error("Progetto non valido");
+      const path = resolveBrowsePath(data.path, browseRoots, homeDir);
+      if (!currentProjectStore().list().some(p => p.path === path && !p.hidden)) throw new Error("Progetto non registrato");
+      await pullRepository(path);
+      return sendJson(res, 200, { ok: true });
+    } catch (error: any) { return sendJson(res, 400, { error: error.message || "Pull non riuscito" }); }
+  }
+  if (url.pathname === "/api/projects/push" && req.method === "POST") {
+    try {
+      const data = await readJsonBody(req, 4096);
+      if (typeof data.path !== "string") throw new Error("Progetto non valido");
+      const path = resolveBrowsePath(data.path, browseRoots, homeDir);
+      if (!currentProjectStore().list().some(p => p.path === path && !p.hidden)) throw new Error("Progetto non registrato");
+      await pushRepository(path);
+      return sendJson(res, 200, { ok: true });
+    } catch (error: any) { return sendJson(res, 400, { error: error.message || "Push non riuscito" }); }
+  }
+  if (url.pathname === "/api/projects/commit" && req.method === "POST") {
+    try {
+      const data = await readJsonBody(req, 8192);
+      if (typeof data.path !== "string") throw new Error("Progetto non valido");
+      const path = resolveBrowsePath(data.path, browseRoots, homeDir);
+      if (!currentProjectStore().list().some(p => p.path === path && !p.hidden)) throw new Error("Progetto non registrato");
+      await commitRepository(path, data.message);
+      return sendJson(res, 200, { ok: true });
+    } catch (error: any) { return sendJson(res, 400, { error: error.message || "Commit non riuscito" }); }
   }
   if (url.pathname === "/api/projects/changes/detail") {
     try {

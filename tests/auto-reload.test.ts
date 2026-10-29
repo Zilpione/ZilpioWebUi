@@ -194,11 +194,11 @@ test('reconciles an uncertain send by checking complete, paginated thread histor
 
 test('local schedules are isolated by account identity without exposing credentials', () => {
   const token = (email: string) => `x.${Buffer.from(JSON.stringify({ email })).toString('base64url')}.x`;
-  const first = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('one\x40example.com'), access_token: 'secret-access' } } });
-  const refreshed = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('one\x40example.com'), access_token: 'other-token' } } });
-  const second = localAutoReloadScope({ auth: { tokens: { account_id: 'account-two', id_token: token('one\x40example.com'), access_token: 'secret-access' } } });
+  const first = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('one@example.com'), access_token: 'secret-access' } } });
+  const refreshed = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('one@example.com'), access_token: 'other-token' } } });
+  const second = localAutoReloadScope({ auth: { tokens: { account_id: 'account-two', id_token: token('one@example.com'), access_token: 'secret-access' } } });
   expect(first).toBe(refreshed); expect(second).not.toBe(first);
-  const anotherUser = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('two\x40example.com') } } });
+  const anotherUser = localAutoReloadScope({ auth: { tokens: { account_id: 'account-one', id_token: token('two@example.com') } } });
   expect(anotherUser).not.toBe(first);
   expect(localAutoReloadScope({ auth: { tokens: { account_id: 'account-one' } } })).toBeNull();
   expect(first).not.toContain('account-one'); expect(first).not.toContain('secret-access');

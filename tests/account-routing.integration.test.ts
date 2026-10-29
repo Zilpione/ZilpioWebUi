@@ -57,7 +57,7 @@ for await(const line of createInterface({input:process.stdin})){
  send({id:m.id,result});
 }
 `, { mode: 0o755 });
-  const store = new AccountStore({ defaultHome: codexHome, loginsDir: join(home, '.codex-logins'), stateDir: join(home, '.webui'), workspaces: [{ id: 'legacy', label: 'legacy', path: join(home, 'legacy'), codexHome: join(home, '.legacy') }, { id: 'workspace', label: 'workspace', path: join(home, 'workspace'), codexHome: join(home, '.workspace') }] });
+  const store = new AccountStore({ defaultHome: codexHome, loginsDir: join(home, '.codex-logins'), stateDir: join(home, '.webui'), workspaces: [{ id: 'El', label: 'El', path: join(home, 'el'), codexHome: join(home, '.El') }, { id: 'zilpio', label: 'zilpio', path: join(home, 'zilpio'), codexHome: join(home, '.zilpio') }] });
   store.prepare(); store.addAuth(auth('second'), 'Second account');
   const port = await new Promise<number>(resolve => { const s = createServer(); s.listen(0, '127.0.0.1', () => { const p = (s.address() as any).port; s.close(() => resolve(p)); }); });
   base = 'http://127.0.0.1:' + port;
@@ -81,7 +81,7 @@ afterAll(async () => {
 
 test('hands off a persisted rollout and rejects stale account requests', async () => {
   const threadId = 'handoff-thread';
-  expect((await rpc('default', 'thread/start', { cwd: join(temp, 'home', 'legacy'), testId: threadId })).type).toBe('rpc/result');
+  expect((await rpc('default', 'thread/start', { cwd: join(temp, 'home', 'el'), testId: threadId })).type).toBe('rpc/result');
   await rpc('default', 'thread/name/set', {threadId, name: 'Original title'});
   const switched = await rpc('default', 'host/thread/switchAccount', { threadId, targetAccountId: secondId });
   expect(switched.type).toBe('rpc/result');
@@ -97,8 +97,8 @@ test('hands off a persisted rollout and rejects stale account requests', async (
   writeFileSync(join(temp, 'pids.delete-fail'), 'once');
   expect((await rpc('default', 'thread/delete', {threadId})).type).toBe('rpc/error');
   const journal = new ThreadOwnership(join(temp, 'home', '.webui', 'thread-ownership.json'));
-  expect(journal.isDeleted('workspace',threadId)).toBe(true);
-  expect(journal.deletion('workspace',threadId).completed).toEqual(['default']);
+  expect(journal.isDeleted('zilpio',threadId)).toBe(true);
+  expect(journal.deletion('zilpio',threadId).completed).toEqual(['default']);
   expect((await rpc('default', 'thread/read', {threadId})).type).toBe('rpc/error');
   child.kill(); await child.exited; child = launch();
   let ready = false;
@@ -107,71 +107,71 @@ test('hands off a persisted rollout and rejects stale account requests', async (
   revision = (await (await api('/api/runtime')).json()).runtimeRevision;
   expect((await rpc('default', 'thread/read', {threadId})).type).toBe('rpc/error');
   let completed = false;
-  for (let i=0;i<100;i++) { const saved=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json')).deletion('workspace',threadId); if(saved.completed.length===2) {completed=true;break;} await Bun.sleep(100); }
+  for (let i=0;i<100;i++) { const saved=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json')).deletion('zilpio',threadId); if(saved.completed.length===2) {completed=true;break;} await Bun.sleep(100); }
   expect(completed).toBe(true);
   expect((await rpc('default', 'thread/delete', {threadId})).type).toBe('rpc/result');
   expect((await rpc('default', 'thread/list')).result.data.some((t:any)=>t.id===threadId)).toBe(false);
   expect((await rpc(secondId, 'thread/list')).result.data.some((t:any)=>t.id===threadId)).toBe(false);
-  expect(existsSync(join(temp,'home','.workspace','sessions',threadId+'.jsonl'))).toBe(false);
-  expect(existsSync(join(temp,'home','.webui','runtime-homes',secondId,'workspace','sessions',threadId+'.jsonl'))).toBe(false);
+  expect(existsSync(join(temp,'home','.zilpio','sessions',threadId+'.jsonl'))).toBe(false);
+  expect(existsSync(join(temp,'home','.webui','runtime-homes',secondId,'zilpio','sessions',threadId+'.jsonl'))).toBe(false);
 }, 15000);
 
 test('resumes deletion after a crash between native deletion and checkpoint', async () => {
   const threadId='delete-checkpoint-crash';
-  expect((await rpc('default','thread/start',{cwd:join(temp,'home','legacy'),testId:threadId})).type).toBe('rpc/result');
+  expect((await rpc('default','thread/start',{cwd:join(temp,'home','el'),testId:threadId})).type).toBe('rpc/result');
   expect((await rpc('default','host/thread/switchAccount',{threadId,targetAccountId:secondId})).type).toBe('rpc/result');
   child.kill(); await child.exited;
   const state=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json'));
-  state.beginDeletion('workspace',threadId,secondId); state.startDeletionAccount('workspace',threadId,'default');
-  unlinkSync(join(temp,'home','.workspace','sessions',threadId+'.jsonl'));
+  state.beginDeletion('zilpio',threadId,secondId); state.startDeletionAccount('zilpio',threadId,'default');
+  unlinkSync(join(temp,'home','.zilpio','sessions',threadId+'.jsonl'));
   child=launch(); let ready=false;
   for(let i=0;i<150;i++){try{if((await (await api('/api/health')).json()).codex){ready=true;break;}}catch{}await Bun.sleep(30);}expect(ready).toBe(true);
   revision=(await (await api('/api/runtime')).json()).runtimeRevision;
   expect((await rpc(secondId,'thread/delete',{threadId})).type).toBe('rpc/result');
   const restored=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json'));
-  expect(restored.deletion('workspace',threadId).completed).toEqual(['default',secondId]);
-  expect(existsSync(join(temp,'home','.webui','runtime-homes',secondId,'workspace','sessions',threadId+'.jsonl'))).toBe(false);
+  expect(restored.deletion('zilpio',threadId).completed).toEqual(['default',secondId]);
+  expect(existsSync(join(temp,'home','.webui','runtime-homes',secondId,'zilpio','sessions',threadId+'.jsonl'))).toBe(false);
 },15000);
 
-test('restart reconciles an interrupted handoff in Workspace', async () => {
-  const threadId='environment-intent', source=join(temp,'home','.workspace','sessions',threadId+'.jsonl');
-  expect((await rpc('default','thread/start',{cwd:join(temp,'home','legacy'),testId:threadId})).type).toBe('rpc/result');
-  expect((await api('/api/runtime/switch','POST',{environmentId:'workspace',expectedRevision:revision})).status).toBe(200);
+test('restart reconciles an interrupted handoff in Zilpio', async () => {
+  const threadId='environment-intent', source=join(temp,'home','.zilpio','sessions',threadId+'.jsonl');
+  expect((await rpc('default','thread/start',{cwd:join(temp,'home','el'),testId:threadId})).type).toBe('rpc/result');
+  expect((await api('/api/runtime/switch','POST',{environmentId:'zilpio',expectedRevision:revision})).status).toBe(200);
   child.kill();await child.exited;
   const state=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json'));
-  state.registerLink('workspace',threadId,'default',secondId,threadId+'.jsonl',(await import('../rollout-transfer.js')).rolloutHash(source));
+  state.registerLink('zilpio',threadId,'default',secondId,threadId+'.jsonl',(await import('../rollout-transfer.js')).rolloutHash(source));
   child=launch();let ready=false;for(let i=0;i<150;i++){try{if((await (await api('/api/health')).json()).codex){ready=true;break;}}catch{}await Bun.sleep(30);}expect(ready).toBe(true);
   revision=(await (await api('/api/runtime')).json()).runtimeRevision;
-  expect((await api('/api/runtime/switch','POST',{environmentId:'workspace',expectedRevision:revision})).status).toBe(200);
+  expect((await api('/api/runtime/switch','POST',{environmentId:'zilpio',expectedRevision:revision})).status).toBe(200);
   revision=(await (await api('/api/runtime')).json()).runtimeRevision;
   expect((await rpc('default','thread/read',{threadId})).type).toBe('rpc/result');
 },15000);
 
 test('startup reconciles interrupted copy intent and rejects divergent histories', async () => {
-  const threadId='intent-thread', source=join(temp,'home','.workspace','sessions',threadId+'.jsonl');
-  const dest=join(temp,'home','.webui','runtime-homes',secondId,'workspace','sessions',threadId+'.jsonl');
+  const threadId='intent-thread', source=join(temp,'home','.zilpio','sessions',threadId+'.jsonl');
+  const dest=join(temp,'home','.webui','runtime-homes',secondId,'zilpio','sessions',threadId+'.jsonl');
   const file=join(temp,'home','.webui','thread-ownership.json');
-  expect((await rpc('default','thread/start',{cwd:join(temp,'home','legacy'),testId:threadId})).type).toBe('rpc/result');
+  expect((await rpc('default','thread/start',{cwd:join(temp,'home','el'),testId:threadId})).type).toBe('rpc/result');
   const stop = async () => {child.kill();await child.exited;};
   const start = async () => {child=launch();let ready=false;for(let i=0;i<150;i++){try{if((await (await api('/api/health')).json()).codex){ready=true;break;}}catch{}await Bun.sleep(30);}expect(ready).toBe(true);revision=(await (await api('/api/runtime')).json()).runtimeRevision;};
   const hash=(await import('../rollout-transfer.js')).rolloutHash;
   await stop();
-  let state=new ThreadOwnership(file);state.registerLink('workspace',threadId,'default',secondId,threadId+'.jsonl',hash(source));
+  let state=new ThreadOwnership(file);state.registerLink('zilpio',threadId,'default',secondId,threadId+'.jsonl',hash(source));
   await start();expect((await rpc('default','thread/read',{threadId})).type).toBe('rpc/result');
-  await stop();state=new ThreadOwnership(file);state.registerLink('workspace',threadId,'default',secondId,threadId+'.jsonl',hash(source));copyFileSync(source,dest);
+  await stop();state=new ThreadOwnership(file);state.registerLink('zilpio',threadId,'default',secondId,threadId+'.jsonl',hash(source));copyFileSync(source,dest);
   await start();expect((await rpc('default','thread/read',{threadId})).type).toBe('rpc/result');
-  await stop();state=new ThreadOwnership(file);state.registerLink('workspace',threadId,'default',secondId,threadId+'.jsonl',hash(source));writeFileSync(dest,'divergent');
+  await stop();state=new ThreadOwnership(file);state.registerLink('zilpio',threadId,'default',secondId,threadId+'.jsonl',hash(source));writeFileSync(dest,'divergent');
   await start();expect((await rpc('default','thread/read',{threadId})).type).toBe('rpc/error');
   expect(readFileSync(source,'utf8')).not.toBe('divergent');expect(readFileSync(dest,'utf8')).toBe('divergent');
 },15000);
 
 test('recovers appended rollout entries after interrupted copy and hard-link handoffs', async () => {
   for (const [threadId, mode] of [['intent-copy-append','copy'], ['intent-link-append','link'], ['intent-truncated','truncated'], ['intent-malformed','malformed']]) {
-    const source=join(temp,'home','.workspace','sessions',threadId+'.jsonl'), dest=join(temp,'home','.webui','runtime-homes',secondId,'workspace','sessions',threadId+'.jsonl');
-    expect((await rpc('default','thread/start',{cwd:join(temp,'home','legacy'),testId:threadId})).type).toBe('rpc/result');
+    const source=join(temp,'home','.zilpio','sessions',threadId+'.jsonl'), dest=join(temp,'home','.webui','runtime-homes',secondId,'zilpio','sessions',threadId+'.jsonl');
+    expect((await rpc('default','thread/start',{cwd:join(temp,'home','el'),testId:threadId})).type).toBe('rpc/result');
     child.kill();await child.exited;
     const state=new ThreadOwnership(join(temp,'home','.webui','thread-ownership.json'));
-    state.registerLink('workspace',threadId,'default',secondId,threadId+'.jsonl',(await import('../rollout-transfer.js')).rolloutHash(source),statSync(source).size,'Recovered title');
+    state.registerLink('zilpio',threadId,'default',secondId,threadId+'.jsonl',(await import('../rollout-transfer.js')).rolloutHash(source),statSync(source).size,'Recovered title');
     if(mode==='link')linkSync(source,dest);else copyFileSync(source,dest);
     appendFileSync(dest,mode==='truncated'?'bad-partial':mode==='malformed'?'bad-json\n':JSON.stringify({type:'session_meta',payload:{id:threadId}})+'\n');
     child=launch();let ready=false;for(let i=0;i<150;i++){try{if((await (await api('/api/health')).json()).codex){ready=true;break;}}catch{}await Bun.sleep(30);}expect(ready).toBe(true);
@@ -185,8 +185,8 @@ test('recovers appended rollout entries after interrupted copy and hard-link han
 
 test('a conflicting destination preserves the source owner and restarts its runtime', async () => {
   const threadId = 'conflicting-thread';
-  expect((await rpc('default', 'thread/start', { cwd: join(temp, 'home', 'legacy'), testId: threadId })).type).toBe('rpc/result');
-  const destination = join(temp, 'home', '.webui', 'runtime-homes', secondId, 'workspace', 'sessions', threadId + '.jsonl');
+  expect((await rpc('default', 'thread/start', { cwd: join(temp, 'home', 'el'), testId: threadId })).type).toBe('rpc/result');
+  const destination = join(temp, 'home', '.webui', 'runtime-homes', secondId, 'zilpio', 'sessions', threadId + '.jsonl');
   mkdirSync(join(destination, '..'), { recursive: true });
   writeFileSync(destination, 'different history');
   expect((await rpc('default', 'host/thread/switchAccount', { threadId, targetAccountId: secondId })).type).toBe('rpc/error');
@@ -207,7 +207,7 @@ test('routes simultaneous chats, histories and colliding approval IDs to their o
     expect(invalid.type).toBe('rpc/error');
     const invalidApproval = await api('/api/codex/respond', 'POST', { accountId: 'unknown-account', requestId: 7, result: { decision: 'accept' }, runtimeRevision: revision });
     expect(invalidApproval.ok ? (await invalidApproval.json()).type : 'rejected').toMatch(/rpc\/error|rejected/);
-    const cwd = join(temp, 'home', 'legacy');
+    const cwd = join(temp, 'home', 'el');
     const [a, b] = await Promise.all([rpc('default', 'thread/start', { cwd }), rpc(secondId, 'thread/start', { cwd })]);
     expect(a.result.thread.id).toBe('thread-initial');
     expect(b.result.thread.id).toBe('thread-second');
@@ -216,7 +216,7 @@ test('routes simultaneous chats, histories and colliding approval IDs to their o
     expect(listB.result.data.map((t: any) => t.id)).toEqual(['thread-second']);
     const turnB = await rpc(secondId, 'turn/start', { threadId: 'thread-second', input: [] });
     expect(turnB.result.turn.id).toBe('turn-second');
-    const blocked = await api('/api/runtime/switch', 'POST', { environmentId: 'workspace', expectedRevision: revision });
+    const blocked = await api('/api/runtime/switch', 'POST', { environmentId: 'zilpio', expectedRevision: revision });
     expect(blocked.status).toBe(200);
     const state = await (await api('/api/runtime')).json();
     expect(state.accountId).toBe('default'); expect(state.runtimeRevision).toBe(revision);
@@ -230,7 +230,7 @@ test('routes simultaneous chats, histories and colliding approval IDs to their o
     expect(stillB.result.data.map((t: any) => t.id)).toEqual(['thread-second']);
     const turnA = await rpc('default', 'turn/start', { threadId: 'thread-initial', input: [] });
     expect(turnA.result.turn.id).toBe('turn-initial');
-    const blockedAgain = await api('/api/runtime/switch', 'POST', { environmentId: 'workspace', expectedRevision: revision });
+    const blockedAgain = await api('/api/runtime/switch', 'POST', { environmentId: 'zilpio', expectedRevision: revision });
     expect(blockedAgain.status).toBe(200);
     const [pendingA, pendingBAgain] = await Promise.all([rpc('default', 'host/approvals/list', { threadId: 'thread-initial' }), rpc(secondId, 'host/approvals/list', { threadId: 'thread-second' })]);
     expect(pendingA.result.requests.map((request: any) => request.id)).toEqual([7]);

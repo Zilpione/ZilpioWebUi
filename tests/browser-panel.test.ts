@@ -18,7 +18,7 @@ describe("browser panel URLs", () => {
 
   test("rejects unsafe schemes and embedded credentials", () => {
     expect(normalizeBrowserUrl("javascript:alert(1)").error).toContain("http:// and https://");
-    expect(normalizeBrowserUrl("https://user:secret\x40example.com").error).toContain("credentials");
+    expect(normalizeBrowserUrl("https://user:secret@example.com").error).toContain("credentials");
     expect(normalizeBrowserUrl(" ").error).toBe("Enter a URL");
   });
 

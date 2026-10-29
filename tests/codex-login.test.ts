@@ -107,7 +107,7 @@ test('dispose terminates a pending child and refuses reuse', async () => {
   expect(f.auths).toEqual([]);
 });
 
-for (const url of ['https://evil.example/device','http://auth.openai.com/codex/device','https://user:pass\x40auth.openai.com/codex/device','https://openai.com.evil.example/']) {
+for (const url of ['https://evil.example/device','http://auth.openai.com/codex/device','https://user:pass@auth.openai.com/codex/device','https://openai.com.evil.example/']) {
  test('rejects untrusted verification URL '+url, async () => {
    const f = await fixture('pending',url);
    expect((await f.login.start()).status).toBe('failed');

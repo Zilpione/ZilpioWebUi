@@ -10,8 +10,8 @@ const temp = mkdtempSync(join(tmpdir(), 'webui-autoreload-test-'));
 const home = join(temp, 'home'), bin = join(temp, 'bin'), project = join(home, 'project');
 const quotaFile = join(temp, 'quota.json'), rpcLog = join(temp, 'rpc.jsonl'), telegramLog = join(temp, 'telegram.jsonl'), historyFile = join(temp, 'history.json');
 for (const path of [home, bin, project, join(home, '.codex'), join(home, '.webui')]) mkdirSync(path, { recursive: true });
-writeFileSync(join(home, '.codex', 'auth.json'), JSON.stringify({ tokens: { account_id: 'auto-reload-test-account', id_token: `x.${Buffer.from(JSON.stringify({ email: 'test\x40example.invalid' })).toString('base64url')}.x` } }));
-writeFileSync(join(home, '.webui', 'telegram.json'), JSON.stringify({ token: '1:fake-token', chatId: '-42', enabled: true }));
+writeFileSync(join(home, '.codex', 'auth.json'), JSON.stringify({ tokens: { account_id: 'auto-reload-test-account', id_token: `x.${Buffer.from(JSON.stringify({ email: 'test@example.invalid' })).toString('base64url')}.x` } }));
+writeFileSync(join(home, '.webui', 'telegram.json'), JSON.stringify({ token: '123456:fake-token', chatId: '12345', enabled: true }));
 writeFileSync(join(temp, 'preload.mjs'), String.raw`
 import { appendFileSync } from 'node:fs';
 const originalFetch = globalThis.fetch;

@@ -47,6 +47,10 @@ const PASSWORD_SESSION_COOKIE = "codex_webui_session";
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const STORED_PASSWORD_VERSION = 1;
 
+export function loginDelayMs(attempts) {
+  return attempts < 6 ? 2000 * 2 ** attempts : null;
+}
+
 function sessionSignature(payload, password) {
   return createHmac("sha256", password).update(payload).digest("base64url");
 }

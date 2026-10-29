@@ -11,7 +11,7 @@ const server=spawn('bun',['run','server.ts'],{
 });
 server.stdout.resume();server.stderr.resume();
 for(let i=0;i<60;i++){
-  try{const response=await fetch(`http://127.0.0.1:${port}/api/auth/status`,{headers:{host:`192.0.2.10:${port}`}});if(response.ok)break}catch{}
+  try{const response=await fetch(`http://127.0.0.1:${port}/api/auth/status`,{headers:{host:`192.168.2.10:${port}`}});if(response.ok)break}catch{}
   await new Promise(resolve=>setTimeout(resolve,100));
 }
 const localhost={

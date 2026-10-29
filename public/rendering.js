@@ -1,6 +1,5 @@
 import { marked } from "marked";
 import katex from "katex";
-import xss from "xss";
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
@@ -252,12 +251,14 @@ function padCjkEmphasis(source = "") {
   });
 }
 
-const sanitizer = new xss.FilterXSS({
-  whiteList: { ...xss.whiteList, code: ["class"], a: ["href", "title", "target", "rel"] },
-  css: false,
-});
 function sanitizeHtml(html) {
-  return sanitizer.process(html);
+  if (typeof window !== "undefined" && globalThis.DOMPurify) {
+    return globalThis.DOMPurify.sanitize(html, { ADD_ATTR: ["target", "rel"], FORBID_TAGS: ["style", "script", "iframe", "object", "embed"] });
+  }
+  return html
+    .replace(/<(script|style|iframe|object|embed)\b[\s\S]*?<\/\1>/gi, (value) => escapeHtml(value))
+    .replace(/\s(?:on\w+|style)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/(?:href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\1/gi, "href=\"#\"");
 }
 
 export function renderAssistantMarkdown(source = "", { cwd = "" } = {}) {

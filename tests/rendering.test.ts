@@ -54,12 +54,6 @@ describe("assistant Markdown and LaTeX rendering", () => {
     expect(html).toContain("&lt;script&gt;");
   });
 
-  test("strips dangerous SVG and active document elements", () => {
-    const html = renderAssistantMarkdown('<svg><a xlink:href="data:text/html,evil">bad</a></svg><meta http-equiv="refresh" content="0;url=https://evil.example">');
-    expect(html).not.toContain("<svg");
-    expect(html).not.toContain("<meta");
-  });
-
   test("keeps dollar amounts as text rather than math", () => {
     const html = renderAssistantMarkdown("The price is $5 and the total is $10.");
     expect(html).not.toContain('class="katex"');

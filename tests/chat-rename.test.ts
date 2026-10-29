@@ -12,7 +12,7 @@ test('rename button saves a chat name and updates the active heading', async () 
   const state = { threads: [thread], active: { ...thread }, defaultAccountId: 'default', autoReload: { one: { enabled: true } }, config: { home: '/work' }, workspaceContext: { cwd: '/work' } };
   const calls: any[] = [];
   let heading = '';
-  const render = new Function('document', 'state', 'rpc', 'prompt', 'renderHeader', `const $=s=>document.querySelector(s),t=s=>s,shortPath=s=>s,titleOf=t=>t.name||'',threadAccount=(_id,fallback)=>fallback,codexIcon=()=>'',formatAge=()=>'',sidebarProjectExpansion={},sidebarMoreChats=new Set(),splitChats=null,mobileSidebarEnabled=()=>false,projectSettings={getProjects:()=>[]},PROJECT_ICONS={folder:'📁'},notifier={status:()=>''},toast=()=>{};${grouping}${renaming}${rendering}return renderThreads;`)(doc, state, async (...args: any[]) => calls.push(args), () => ' New name ', () => { heading = state.active.name; });
+  const render = new Function('document', 'state', 'rpc', 'prompt', 'renderHeader', `const $=s=>document.querySelector(s),t=s=>s,shortPath=s=>s,titleOf=t=>t.name||'',threadAccount=(_id,fallback)=>fallback,codexIcon=()=>'',formatAge=()=>'',sidebarProjectExpansion={},sidebarProjectOrder=[],sidebarMoreChats=new Set(),splitChats=null,mobileSidebarEnabled=()=>false,projectSettings={getProjects:()=>[]},PROJECT_ICONS={folder:'📁'},notifier={status:()=>''},toast=()=>{};${grouping}${renaming}${rendering}return renderThreads;`)(doc, state, async (...args: any[]) => calls.push(args), () => ' New name ', () => { heading = state.active.name; });
   render();
   const autoReload = doc.querySelector<HTMLButtonElement>('.thread-auto-reload');
   expect(autoReload?.disabled).toBe(true);

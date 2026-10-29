@@ -2,9 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { createPasswordSession, createStoredPassword, isAllowedBrowserRpcMethod, isRequestAuthorized, parseCookieHeader, resolvePublicAsset, storedPasswordSessionSecret, verifyPasswordSession, verifyStoredPassword } from "../server-security.js";
+import { createPasswordSession, createStoredPassword, isAllowedBrowserRpcMethod, isRequestAuthorized, loginDelayMs, parseCookieHeader, resolvePublicAsset, storedPasswordSessionSecret, verifyPasswordSession, verifyStoredPassword } from "../server-security.js";
 
 describe("WebUI server security boundary", () => {
+  test("login delay doubles until the next attempt exceeds 100 seconds", () => {
+    expect(Array.from({length: 8}, (_, attempt) => loginDelayMs(attempt))).toEqual([2000, 4000, 8000, 16000, 32000, 64000, null, null]);
+  });
   test("allows only the RPC methods used by the browser client", () => {
     for (const method of ["model/list", "permissionProfile/list", "account/logout", "account/rateLimits/read", "thread/list", "thread/read", "thread/delete", "thread/name/set", "thread/resume", "thread/turns/list", "host/thread/live", "host/thread/switchAccount", "thread/start", "turn/start", "turn/steer", "turn/interrupt"]) {
       expect(isAllowedBrowserRpcMethod(method)).toBe(true);
@@ -76,8 +79,8 @@ describe("WebUI server security boundary", () => {
     const session = createPasswordSession("correct horse", { now: 1_700_000_000_000, ttlMs: 60_000 });
     const cookie = `other=1; codex_webui_session=${encodeURIComponent(session.token)}; theme=dark`;
     expect(parseCookieHeader(cookie).codex_webui_session).toBe(session.token);
-    expect(isRequestAuthorized({ remoteAddress: "192.0.2.40", hostHeader: "192.0.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_030_000 })).toBe(true);
-    expect(isRequestAuthorized({ remoteAddress: "192.0.2.40", hostHeader: "192.0.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_060_001 })).toBe(false);
-    expect(isRequestAuthorized({ remoteAddress: "192.0.2.40", hostHeader: "192.0.2.10:8899", authorization: null, accessToken: "correct horse", cookie, origin: "https://evil.example", now: 1_700_000_030_000 })).toBe(false);
+    expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_030_000 })).toBe(true);
+    expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, now: 1_700_000_060_001 })).toBe(false);
+    expect(isRequestAuthorized({ remoteAddress: "192.168.2.40", hostHeader: "192.168.2.10:8899", authorization: null, accessToken: "correct horse", cookie, origin: "https://evil.example", now: 1_700_000_030_000 })).toBe(false);
   });
 });

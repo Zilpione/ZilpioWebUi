@@ -42,6 +42,7 @@
     <div class="sidebar-top">
       <div class="sidebar-mode-row">
         <button class="sidebar-toolbar-button mobile-settings-button" id="mobileSettingsButton" type="button" title="Impostazioni" aria-label="Impostazioni"><span class="icon-slot" data-icon="settings"></span></button>
+        <button class="sidebar-row projects-button" id="projectButton" type="button"><span class="icon-slot" data-icon="folderOpen"></span><span>Projects</span></button>
         <button class="sidebar-toolbar-button" id="sidebarSearchButton" type="button" title="Search" aria-label="Search chats" aria-expanded="false" aria-controls="sidebarSearchPanel"><span class="icon-slot" data-icon="search"></span></button>
       </div>
       <div class="sidebar-search-panel" id="sidebarSearchPanel" hidden>
@@ -49,14 +50,12 @@
         <button class="sidebar-search-close" id="sidebarSearchClose" type="button" title="Close search" aria-label="Close search"><span class="icon-slot" data-icon="x"></span></button>
       </div>
       <label class="environment-control" for="environmentSelect" hidden><span>Ambiente</span><select id="environmentSelect" data-runtime-control aria-label="Ambiente" disabled></select></label>
-      <button class="sidebar-row new-task" id="newTask"><span class="icon-slot" data-icon="plus"></span><span>New chat</span><kbd>⌘K</kbd></button>
     </div>
     <div class="sidebar-scroll">
       <span id="projectName" hidden>codex-webui</span><span id="projectPath" hidden>~/projects/codex-webui</span>
-      <button class="sidebar-row projects-button" id="projectButton" type="button"><span class="icon-slot" data-icon="folderOpen"></span><span>Projects</span></button>
       <div class="thread-list" id="threadList"><div class="list-state">Connecting to Codex…</div></div>
     </div>
-    <section id="sidebarUsage" class="sidebar-usage" aria-label="Consumo account" hidden></section>
+    <details class="sidebar-usage-panel" open><summary>Consumi</summary><section id="sidebarUsage" class="sidebar-usage" aria-label="Consumo account" hidden></section></details>
     <div class="sidebar-footer">
       <div class="account-menu" id="accountMenu" hidden>
         <div class="account-menu-identity"><span class="account-menu-avatar account-initials" id="accountMenuAvatar">?</span><span><strong id="accountMenuName">Settings</strong><small id="accountMenuSubtitle"></small></span></div>
@@ -134,6 +133,7 @@
           </div>
         </div>
       </form>
+      <section id="sidebarGit" class="sidebar-git" aria-label="Stato Git" hidden></section>
       <div class="usage-footer" hidden><div id="usageBars" class="usage-bars" aria-label="Quote account"></div><button type="button" id="usageManageAccounts" class="usage-manage">Account</button></div>
     </div>
     </main>
@@ -253,7 +253,7 @@
 </div>
 <dialog id="accountsDialog" class="accounts-dialog" aria-labelledby="accountsTitle">
   <div class="accounts-card">
-    <header class="accounts-header"><div><span class="accounts-eyebrow">SPAZIO DI LAVORO</span><strong id="accountsTitle">Account</strong><p>Gestisci gli account per le tue chat.</p></div><button type="button" data-close-accounts aria-label="Chiudi">×</button></header>
+    <header class="accounts-header"><div><span class="accounts-eyebrow">SPAZIO DI LAVORO</span><strong id="accountsTitle">Account</strong><p>Gestisci gli account per le tue chat in Zilpio.</p></div><button type="button" data-close-accounts aria-label="Chiudi">×</button></header>
     <section class="accounts-section"><div class="accounts-section-heading"><div><h2>Ambiente</h2><p>Condiviso tra le finestre aperte.</p></div></div><div id="runtimeWorkspaces" class="runtime-workspaces"></div></section>
     <section class="accounts-section"><div class="accounts-section-heading"><div><h2>Account ChatGPT</h2><p>Scegli l’account principale per le nuove chat oppure usa un altro account per la chat corrente.</p></div></div><div id="accountsList"></div>
     <button type="button" id="addAccount"><span aria-hidden="true">+</span> Aggiungi account</button></section>

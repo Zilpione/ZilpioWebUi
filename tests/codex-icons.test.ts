@@ -3,7 +3,7 @@ import { codexInterfaceMark } from "../public/codex-brand.js";
 import { codexIcon, codexIconNodes, hydrateCodexIcons } from "../public/codex-icons.js";
 
 describe("Codex icon assets", () => {
-  test("renders the Workspace logo", () => {
+  test("renders the Zilpio logo", () => {
     const html = codexInterfaceMark("assistant-mark");
     expect(html).toContain('data-codex-interface-mark');
     expect(html).toContain('src="/zilpio-logo.png"');

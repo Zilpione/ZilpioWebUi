@@ -31,14 +31,14 @@ test('isolates projects by environment and migrates the shared list only once',(
   f.store.update(f.path,{icon:'star'});
   const other=join(f.root,'Other');mkdirSync(other);
   const { EnvironmentProjectStores }=require('../project-store.ts');
-  const stores=new EnvironmentProjectStores({file:f.options.file,roots:[f.root],environmentIds:['legacy','workspace'],initialEnvironment:'legacy'});
-  expect(stores.get('legacy').list()).toMatchObject([{path:f.path,icon:'star'}]);
-  expect(stores.get('workspace').list()).toEqual([]);
-  stores.get('workspace').update(other,{});
-  expect(stores.get('legacy').list().map((p:any)=>p.path)).toEqual([f.path]);
-  const reload=new EnvironmentProjectStores({file:f.options.file,roots:[f.root],environmentIds:['legacy','workspace'],initialEnvironment:'workspace'});
-  expect(reload.get('legacy').list().map((p:any)=>p.path)).toEqual([f.path]);
-  expect(reload.get('workspace').list().map((p:any)=>p.path)).toEqual([other]);
+  const stores=new EnvironmentProjectStores({file:f.options.file,roots:[f.root],environmentIds:['El','zilpio'],initialEnvironment:'El'});
+  expect(stores.get('El').list()).toMatchObject([{path:f.path,icon:'star'}]);
+  expect(stores.get('zilpio').list()).toEqual([]);
+  stores.get('zilpio').update(other,{});
+  expect(stores.get('El').list().map((p:any)=>p.path)).toEqual([f.path]);
+  const reload=new EnvironmentProjectStores({file:f.options.file,roots:[f.root],environmentIds:['El','zilpio'],initialEnvironment:'zilpio'});
+  expect(reload.get('El').list().map((p:any)=>p.path)).toEqual([f.path]);
+  expect(reload.get('zilpio').list().map((p:any)=>p.path)).toEqual([other]);
  }finally{rmSync(f.temp,{recursive:true,force:true});}
 });
 

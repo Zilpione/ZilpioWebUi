@@ -20,9 +20,13 @@ surfaces-*.png
 
 # Local managed-account state
 .codex-logins/
-.legacy/
-.workspace/
+.El/
+.zilpio/
 .webui/
 
 # Local deployment backups
 *.bak-*
+
+.legacy/
+
+.workspace/

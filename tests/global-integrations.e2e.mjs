@@ -19,7 +19,7 @@ try {
   const call = (path, method = 'GET', body) => fetch(url+path, { method, headers, ...(body ? {body:JSON.stringify(body)} : {}) });
   assert.equal((await fetch(url+'/api/integrations',{headers:{host:'example.com'}})).status, 401);
   let response = await call('/api/integrations/ssh','POST',{key:readFileSync(key,'utf8')}); assert.equal(response.status, 200); let state = await response.json(); assert.equal(state.sshConfigured,true); assert.match(state.publicKey,/^ssh-ed25519 /);
-  response = await call('/api/integrations/telegram','POST',{token:'1:test_token',chatId:'-42',enabled:true}); assert.equal(response.status,200);
+  response = await call('/api/integrations/telegram','POST',{token:'123456:test_token',chatId:'123456',enabled:true}); assert.equal(response.status,200);
   response = await call('/api/integrations'); const text=await response.text(); assert.ok(!text.includes('test_token')); assert.ok(!text.includes('PRIVATE KEY'));
   response = await call('/api/files/download?path='+encodeURIComponent(join(home,'.webui','git-identity'))); assert.equal(response.status,404);
   response = await call('/api/files/download?path='+encodeURIComponent(join(home,'.webui','telegram.json'))); assert.equal(response.status,404);

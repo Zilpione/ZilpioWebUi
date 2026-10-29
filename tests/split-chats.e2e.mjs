@@ -7,7 +7,7 @@ import { launchOptions } from './browser-runtime.mjs';
 
 const root=new URL('..',import.meta.url).pathname;
 const temp=mkdtempSync(join(tmpdir(),'webui-split-test-'));
-const home=join(temp,'home'),bin=join(temp,'bin'),managed=process.env.SPLIT_TEST_MANAGED==='1',projectA=join(home,...(managed?['legacy','project-a']:['project-a'])),projectB=join(home,...(managed?['workspace','project-b']:['project-b'])),log=join(temp,'requests.jsonl');
+const home=join(temp,'home'),bin=join(temp,'bin'),managed=process.env.SPLIT_TEST_MANAGED==='1',projectA=join(home,...(managed?['el','project-a']:['project-a'])),projectB=join(home,...(managed?['zilpio','project-b']:['project-b'])),log=join(temp,'requests.jsonl');
 for(const path of [home,bin,projectA,projectB,join(home,'.codex')])mkdirSync(path,{recursive:true});
 writeFileSync(join(bin,'codex'),String.raw`#!/usr/bin/env bun
 import { createInterface } from 'node:readline';
@@ -59,6 +59,19 @@ try{
  stage='opening both chats';
  await page.goto(base,{waitUntil:'domcontentloaded'});
  await page.waitForSelector('.thread-item[data-id="thread-a"]');
+ stage='project ordering';
+ const projectOrder=()=>page.locator('.sidebar-project-group[data-project]').evaluateAll((groups,paths)=>groups.map(group=>group.dataset.project).filter(path=>paths.includes(path)),[projectA,projectB]);
+ const projectSection=path=>page.locator('.sidebar-project-group').filter({has:page.locator(`.thread-item[data-id="${path===projectA?'thread-a':'thread-b'}"]`)});
+ if(JSON.stringify(await projectOrder())!==JSON.stringify([projectA,projectB]))throw new Error('Unexpected initial project order');
+ await projectSection(projectB).locator('.project-settings-button').click();
+ await projectSection(projectB).getByRole('button',{name:'Sposta su'}).click();
+ if(JSON.stringify(await projectOrder())!==JSON.stringify([projectB,projectA]))throw new Error('Project did not move up');
+ await page.reload({waitUntil:'domcontentloaded'});
+ await page.waitForSelector('.thread-item[data-id="thread-a"]');
+ if(JSON.stringify(await projectOrder())!==JSON.stringify([projectB,projectA]))throw new Error('Project order did not persist');
+ await projectSection(projectB).locator('.project-settings-button').click();
+ await projectSection(projectB).getByRole('button',{name:'Sposta giù'}).click();
+ if(JSON.stringify(await projectOrder())!==JSON.stringify([projectA,projectB]))throw new Error('Project did not move down');
  await page.locator('#sidebarSearchButton').click();
  await page.locator('#threadSearch').fill('Chat');
  await page.locator('.thread-item[data-id="thread-a"] .thread-name').click();
@@ -273,10 +286,10 @@ try{
   const switched=await page.evaluate(async()=>{
    const runtimeRevision=globalThis.__codexWebuiDebug.state.config.runtimeRevision;
    for(const threadId of ['thread-a','thread-b','thread-new','thread-delayed'])await fetch('/api/rpc',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:780,method:'turn/interrupt',params:{threadId,turnId:'turn-'+threadId},runtimeRevision})});
-   return (await fetch('/api/runtime/switch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({environmentId:'workspace',expectedRevision:runtimeRevision})})).ok;
+   return (await fetch('/api/runtime/switch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({environmentId:'zilpio',expectedRevision:runtimeRevision})})).ok;
   });
   if(!switched)throw new Error('Could not switch the test environment');
-  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.config.environmentId==='workspace');
+  await page.waitForFunction(()=>globalThis.__codexWebuiDebug?.state.config.environmentId==='zilpio');
   await page.locator('#splitChatButton').click();await page.waitForFunction(()=>document.querySelector('#secondaryChatFrame')?.contentWindow?.__codexWebuiDebug?.state.connected);
   if(await page.frameLocator('#secondaryChatFrame').locator('#prompt').inputValue()!=='Bozza ambiente precedente')throw new Error('Reselecting the same environment lost the unsent draft');
  }

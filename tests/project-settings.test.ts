@@ -45,7 +45,7 @@ test('hidden project chats remain in Altre chat; empty registered projects and s
  const rendering=source.slice(source.indexOf('function renderThreads('),source.indexOf('async function openThread('));
  const projects=[{path:'/work/Hidden',hidden:true,icon:'folder',color:null},{path:'/work/Empty',hidden:false,icon:'rocket',color:'#3b82f6'},{path:'/work/<img onerror=alert(1)>',hidden:false,icon:'<script>',color:'red;display:none'}];
  const state={threads:[{id:'t1',cwd:'/work/Hidden',name:'Retained chat'}],active:{id:'t1',cwd:'/work/Hidden'},config:{home:'/home'},workspaceContext:{cwd:'/work/Hidden'}};
- new Function('document','state','projectSettings','PROJECT_ICONS','projectRepository',`const $=s=>document.querySelector(s),t=s=>s,shortPath=s=>s,titleOf=t=>t.name||'',codexIcon=()=>'<span class="icon-slot"></span>',escapeHtml=s=>s,formatAge=()=>'',sidebarProjectExpansion={},sidebarMoreChats=new Set(),splitChats=null,mobileSidebarEnabled=()=>false,openThread=()=>{},sidebarThreadStatus=()=>'',notifier={status:()=>'',unreadVersion:()=>0,acknowledge:()=>{}};${grouping}${rendering}renderThreads();`)(doc,state,{getProjects:()=>projects,open:()=>{}},{folder:'📁',rocket:'🚀'},{status:async()=>({assigned:false}),open:()=>{}});
+ new Function('document','state','projectSettings','PROJECT_ICONS','projectRepository',`const $=s=>document.querySelector(s),t=s=>s,shortPath=s=>s,titleOf=t=>t.name||'',codexIcon=()=>'<span class="icon-slot"></span>',escapeHtml=s=>s,formatAge=()=>'',sidebarProjectExpansion={},sidebarProjectOrder=[],sidebarMoreChats=new Set(),sidebarThreadStatus=()=>'',threadAccount=(_id,fallback)=>fallback,splitChats=null,mobileSidebarEnabled=()=>false,openThread=()=>{},notifier={status:()=>'',unreadVersion:()=>0,acknowledge:()=>{}};${grouping}${rendering}renderThreads();`)(doc,state,{getProjects:()=>projects,open:()=>{}},{folder:'📁',rocket:'🚀'},{status:async()=>({assigned:false}),open:()=>{}});
  expect(Boolean(doc.querySelector('[data-project="/work/Hidden"]'))).toBe(false);expect(doc.querySelector('[data-project="__unassigned__"]')!.textContent).toContain('Altre chat');
  expect(doc.querySelector('#threadList')!.lastElementChild?.getAttribute('data-project')).toBe('__unassigned__');
  expect(doc.querySelector('[data-id="t1"]')!.textContent).toContain('Retained chat');expect(state.threads[0].cwd).toBe('/work/Hidden');
@@ -71,7 +71,7 @@ test('background refresh preserves appearance draft and successful save accepts 
  f.projects.push({path:'/work/Other',name:'Other',color:null,icon:'star',hidden:false});
  await f.settings.refresh();expect(color.value).toBe('#3b82f6');expect(icon.value).toBe('rocket');
  (f.doc.querySelector('#saveProjectSettings') as HTMLButtonElement).click();await tick();expect(f.projects[0]).toMatchObject({color:'#3b82f6',icon:'rocket'});
- f.projects[0].icon='book';f.projects[0].color='#22c55e' as any;await f.settings.open('/work/One');
+ f.projects[0].icon='book';f.projects[0].color='#22c55e' as any;await f.settings.refresh();
  expect(color.value).toBe('#22c55e');expect(icon.value).toBe('book');
 });
 

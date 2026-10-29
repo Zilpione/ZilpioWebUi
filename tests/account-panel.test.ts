@@ -37,7 +37,7 @@ function panelFixture() {
   dialog.showModal=()=>{dialog.open=true};dialog.close=()=>{dialog.open=false};
   return {doc,dom};
 }
-const runtime={accountId:'a',environmentId:'legacy',accounts:[{id:'a',label:'Primo',email:'a\x40example.com',active:true},{id:'b',label:'Secondo',active:false}],environments:[{id:'legacy',label:'legacy'},{id:'workspace',label:'workspace'}]};
+const runtime={accountId:'a',environmentId:'el',accounts:[{id:'a',label:'Primo',email:'a@example.com',active:true},{id:'b',label:'Secondo',active:false}],environments:[{id:'el',label:'El'},{id:'zilpio',label:'zilpio'}]};
 
 test('quota rendering declares unavailable data without accessible fake progress',()=>{
   const {doc}=panelFixture();const host=doc.querySelector('#usageBars')!;
@@ -51,7 +51,7 @@ test('quota rendering declares unavailable data without accessible fake progress
 test('account panel lists independent environments and keeps active account undeletable',async()=>{
   const {doc}=panelFixture();
   const panel=initAccountPanel({document:doc,fetch:async(path)=>new Response(JSON.stringify(path==='/api/runtime'?runtime:{}))});
-  try{await panel.ready;expect([...doc.querySelectorAll('#runtimeWorkspaces button')].map(node=>node.textContent)).toEqual(['legacy','workspace']);
+  try{await panel.ready;expect([...doc.querySelectorAll('#runtimeWorkspaces button')].map(node=>node.textContent)).toEqual(['El','zilpio']);
     const rows=doc.querySelectorAll('.managed-account');expect(rows[0].textContent).not.toContain('Elimina');expect(rows[1].textContent).toContain('Elimina');
     await panel.open();expect((doc.querySelector('#accountsDialog') as any).open).toBe(true);
   }finally{panel.dispose()}
@@ -63,9 +63,9 @@ test('environment switch disables controls and reloads without changing project'
     if(path==='/api/runtime/switch')return new Promise(resolve=>{resolveSwitch=resolve});
     return new Response(JSON.stringify(path==='/api/runtime'?runtime:{rateLimits:{primary:{usedPercent:20,windowDurationMins:300}}}));
   }});
-  try{await panel.ready;await panel.refreshUsage();const pending=panel.switchRuntime({environmentId:'workspace'});
+  try{await panel.ready;await panel.refreshUsage();const pending=panel.switchRuntime({environmentId:'zilpio'});
     expect(doc.querySelector('#usageBars [role=progressbar]')).toBeNull();expect((doc.querySelector('#addAccount') as HTMLButtonElement).disabled).toBe(true);expect(applied).toEqual([]);
-    resolveSwitch(new Response(JSON.stringify({...runtime,environmentId:'workspace'})));await pending;
+    resolveSwitch(new Response(JSON.stringify({...runtime,environmentId:'zilpio'})));await pending;
     expect(applied).toEqual([]);expect(reloads).toBe(1);
   }finally{panel.dispose()}
 });
@@ -94,7 +94,7 @@ function appFunction(name:string,next:string,scope:Record<string,any>){expect(ap
 test('websocket and HTTP fallback RPC pin the runtime revision loaded by the browser',async()=>{
   const sent:any[]=[];const state:any={rpcId:1,transport:'ws',config:{runtimeRevision:'old-runtime'},pending:new Map(),ws:{readyState:1,send:(payload:string)=>sent.push(JSON.parse(payload))}};
   const rpc=appFunction('rpc','respondToCodex',{state,WebSocket:{OPEN:1},postBridge:async(path:string,payload:any)=>{sent.push(payload);return{type:'rpc/result',result:{}}}});
-  rpc('thread/start',{cwd:'/home/app/legacy'});expect(sent[0].runtimeRevision).toBe('old-runtime');
+  rpc('thread/start',{cwd:'/home/codex/el'});expect(sent[0].runtimeRevision).toBe('old-runtime');
   state.transport='sse';await rpc('thread/list');expect(sent[1].runtimeRevision).toBe('old-runtime');
 });
 
@@ -112,7 +112,7 @@ test('runtime switch includes the revision observed by account management',async
     if(path==='/api/runtime/switch')submitted=JSON.parse(String(options?.body));
     return new Response(JSON.stringify(path==='/api/usage'?{}:{...runtime,runtimeRevision:'observed-runtime'}));
   }});
-  try{await panel.ready;await panel.switchRuntime({environmentId:'workspace'});expect(submitted).toEqual({environmentId:'workspace',expectedRevision:'observed-runtime'})}finally{panel.dispose()}
+  try{await panel.ready;await panel.switchRuntime({environmentId:'zilpio'});expect(submitted).toEqual({environmentId:'zilpio',expectedRevision:'observed-runtime'})}finally{panel.dispose()}
 });
 
 
@@ -123,40 +123,40 @@ test('sidebar environment selector switches history without changing selected pr
     return new Response(JSON.stringify(path==='/api/usage'?{}:{...runtime,runtimeRevision:'revision'}));
   }});
   try{await panel.ready;const select=doc.querySelector('#environmentSelect') as HTMLSelectElement;
-    expect(select).not.toBeNull();expect([...select.options].map(option=>option.textContent)).toEqual(['legacy','workspace']);
-    select.value='workspace';select.dispatchEvent(new doc.defaultView!.Event('change'));await new Promise(resolve=>setTimeout(resolve,0));
-    expect(submitted).toEqual({environmentId:'workspace',expectedRevision:'revision'});expect(selected).toEqual([]);expect(reloads).toBe(1);
+    expect(select).not.toBeNull();expect([...select.options].map(option=>option.textContent)).toEqual(['El','zilpio']);
+    select.value='zilpio';select.dispatchEvent(new doc.defaultView!.Event('change'));await new Promise(resolve=>setTimeout(resolve,0));
+    expect(submitted).toEqual({environmentId:'zilpio',expectedRevision:'revision'});expect(selected).toEqual([]);expect(reloads).toBe(1);
   }finally{panel.dispose()}
 });
 
 test('project confirmation selects nested folder locally without runtime switch',async()=>{
   const selected:string[]=[];let closed=0,started=0,switched=0;
-  const useSelectedFolder=appFunction('useSelectedFolder','useProjectless',{folderBrowse:{selected:'/home/app/legacy/app'},projectSettings:{register:async()=>{}},$:()=>({close:()=>{closed++}}),startNewTask:(path:string)=>{selected.push(path);started++},configuredWorkspaces:()=>[{path:'/home/app/legacy/app',id:'legacy'}],accountPanel:{switchRuntime:()=>{switched++}}});
-  await useSelectedFolder();expect(selected).toEqual(['/home/app/legacy/app']);expect(closed).toBe(1);expect(started).toBe(1);expect(switched).toBe(0);
+  const useSelectedFolder=appFunction('useSelectedFolder','useProjectless',{folderBrowse:{selected:'/home/codex/el/app'},projectSettings:{register:async()=>{}},$:()=>({close:()=>{closed++}}),startNewTask:(path:string)=>{selected.push(path);started++},configuredWorkspaces:()=>[{path:'/home/codex/el/app',id:'el'}],accountPanel:{switchRuntime:()=>{switched++}}});
+  await useSelectedFolder();expect(selected).toEqual(['/home/codex/el/app']);expect(closed).toBe(1);expect(started).toBe(1);expect(switched).toBe(0);
 });
 
 test('saved project survives either environment and rejects hidden or escaped paths',()=>{
   const selectedProjectPath=appFunction('selectedProjectPath','restoreSelectedProject',{});
-  const config={home:'/home/app',defaultCwd:'/home/app/legacy',projectRoots:['/home/app/legacy','/home/app/workspace']};
-  for(const environmentId of ['legacy','workspace'])expect(selectedProjectPath({...config,environmentId},'~/workspace/app')).toBe('/home/app/workspace/app');
-  for(const path of ['/home/app/.codex','/home/app/legacy/../../.codex','/home/app/legacy-old','/home/app/legacy/.git','~'])expect(selectedProjectPath(config,path)).toBe(config.defaultCwd);
+  const config={home:'/home/codex',defaultCwd:'/home/codex/el',projectRoots:['/home/codex/el','/home/codex/zilpio']};
+  for(const environmentId of ['el','zilpio'])expect(selectedProjectPath({...config,environmentId},'~/zilpio/app')).toBe('/home/codex/zilpio/app');
+  for(const path of ['/home/codex/.codex','/home/codex/el/../../.codex','/home/codex/el-old','/home/codex/el/.git','~'])expect(selectedProjectPath(config,path)).toBe(config.defaultCwd);
 });
 
 test('missing saved project falls back to stable default folder',async()=>{
-  const selected:string[]=[];const config={home:'/home/app',defaultCwd:'/home/app/legacy',projectRoots:['/home/app/legacy','/home/app/workspace']};
+  const selected:string[]=[];const config={home:'/home/codex',defaultCwd:'/home/codex/el',projectRoots:['/home/codex/el','/home/codex/zilpio']};
   const selectedProjectPath=appFunction('selectedProjectPath','restoreSelectedProject',{});
   const restoreSelectedProject=appFunction('restoreSelectedProject','boot',{state:{config},selectedProjectPath,fetch:async()=>new Response('{}',{status:404}),setWorkspace:(path:string)=>selected.push(path)});
-  await restoreSelectedProject('/home/app/workspace/deleted');expect(selected).toEqual(['/home/app/legacy']);
+  await restoreSelectedProject('/home/codex/zilpio/deleted');expect(selected).toEqual(['/home/codex/el']);
 });
 
 test('managed project picker browses both roots and cannot select home alias',async()=>{
   const {doc}=panelFixture();let folderBrowse:any={path:'~',selected:null};const paths:string[]=[];
   // Evaluate the real browser function with shared mutable browse state.
   const source=appSource.slice(appSource.indexOf('async function loadFolders('),appSource.indexOf('function openFolderPicker(')).trim();
-  const load=new Function('doc','fetch','configuredEnvironments',`let folderBrowse={path:'~',selected:null};const document=doc,$=selector=>doc.querySelector(selector),icons={file:''},escapeHtml=value=>value,projectCreator={reset(){}};${source};return async path=>{await loadFolders(path);return folderBrowse}`)(doc,async(path:string)=>{paths.push(path);return new Response(JSON.stringify({path:'/home/app',parent:null,selectable:false,folders:[{name:'legacy',path:'/home/app/legacy'},{name:'workspace',path:'/home/app/workspace'}]}))},()=>runtime.environments);
+  const load=new Function('doc','fetch','configuredEnvironments',`let folderBrowse={path:'~',selected:null};const document=doc,$=selector=>doc.querySelector(selector),icons={file:''},escapeHtml=value=>value,projectCreator={reset(){}};${source};return async path=>{await loadFolders(path);return folderBrowse}`)(doc,async(path:string)=>{paths.push(path);return new Response(JSON.stringify({path:'/home/codex',parent:null,selectable:false,folders:[{name:'el',path:'/home/codex/el'},{name:'zilpio',path:'/home/codex/zilpio'}]}))},()=>runtime.environments);
   folderBrowse=await load('~');expect(paths).toEqual(['/api/folders?path=~']);expect(folderBrowse.selected).toBeNull();expect((doc.querySelector('#folderConfirm') as HTMLButtonElement).disabled).toBe(true);
-  expect([...doc.querySelectorAll('#folderList .folder-item')].map(node=>node.textContent)).toEqual(['legacy','workspace']);
-  (doc.querySelector('#folderList .folder-item') as HTMLButtonElement).click();expect(folderBrowse.selected).toBe('/home/app/legacy');expect((doc.querySelector('#folderConfirm') as HTMLButtonElement).disabled).toBe(false);
+  expect([...doc.querySelectorAll('#folderList .folder-item')].map(node=>node.textContent)).toEqual(['el','zilpio']);
+  (doc.querySelector('#folderList .folder-item') as HTMLButtonElement).click();expect(folderBrowse.selected).toBe('/home/codex/el');expect((doc.querySelector('#folderConfirm') as HTMLButtonElement).disabled).toBe(false);
 });
 
 test('sidebar environment switch failure reports visible error and restores current selection',async()=>{
@@ -166,9 +166,9 @@ test('sidebar environment switch failure reports visible error and restores curr
     return new Response(JSON.stringify(path==='/api/runtime'?{...runtime,runtimeRevision:'revision'}:{}));
   }});
   try{await panel.ready;const selector=doc.querySelector('#environmentSelect') as HTMLSelectElement;
-    selector.value='workspace';selector.dispatchEvent(new doc.defaultView!.Event('change'));await new Promise(resolve=>setTimeout(resolve,0));
+    selector.value='zilpio';selector.dispatchEvent(new doc.defaultView!.Event('change'));await new Promise(resolve=>setTimeout(resolve,0));
     expect(errors).toEqual(['Attività in corso: termina prima il turno.']);expect(doc.querySelector('#accountsStatus')?.textContent).toBe(errors[0]);
-    expect(selector.value).toBe('legacy');expect(selector.disabled).toBe(false);expect(reloads).toBe(0);expect((doc.querySelector('#accountsDialog') as any).open).toBe(false);
+    expect(selector.value).toBe('el');expect(selector.disabled).toBe(false);expect(reloads).toBe(0);expect((doc.querySelector('#accountsDialog') as any).open).toBe(false);
   }finally{panel.dispose()}
 });
 
@@ -179,10 +179,10 @@ test('environment selector is shown only when managed environments are available
  try{await panel.ready;expect(control.hidden).toBe(false);}finally{panel.dispose();}
 });
 
-test('single Workspace environment hides environment controls and preserves account management',async()=>{
+test('single Zilpio environment hides environment controls and preserves account management',async()=>{
   const {doc}=panelFixture();
-  const onlyWorkspace={...runtime,environmentId:'workspace',environments:[{id:'workspace',label:'Workspace'}]};
-  const panel=initAccountPanel({document:doc,fetch:async(path)=>new Response(JSON.stringify(path==='/api/runtime'?onlyWorkspace:{}))});
+  const onlyZilpio={...runtime,environmentId:'zilpio',environments:[{id:'zilpio',label:'Zilpio'}]};
+  const panel=initAccountPanel({document:doc,fetch:async(path)=>new Response(JSON.stringify(path==='/api/runtime'?onlyZilpio:{}))});
   try{
     await panel.ready;
     expect((doc.querySelector('.environment-control') as HTMLElement).hidden).toBe(true);

@@ -612,7 +612,7 @@ body.sidebar-hidden .window-brand{visibility:hidden}
 .sidebar>div{transition:opacity var(--sidebar-motion-duration) var(--sidebar-motion-easing)}
 body.sidebar-hidden .sidebar>div{opacity:0}
 .sidebar-top{position:relative;gap:8px;padding:8px 8px 0}
-.sidebar-mode-row{height:32px;margin-left:8px;padding-right:1px;display:flex;align-items:center;gap:4px}
+.sidebar-mode-row{height:32px;display:flex;align-items:center;gap:4px}
 .sidebar-product{min-width:0;max-width:calc(100% - 36px);height:32px;display:flex;align-items:center;gap:4px;margin-left:-8px;padding:0 8px;border-radius:12px;color:var(--app-text);text-align:left}
 .sidebar-product:hover{background:var(--app-hover)}
 .sidebar-product strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:"OpenAI Sans",var(--ui);font-size:17px;line-height:24px;font-weight:600;letter-spacing:0}
@@ -634,8 +634,8 @@ body.sidebar-hidden .sidebar>div{opacity:0}
 .sidebar-row{height:30px;min-height:30px;border-radius:10px;color:var(--app-text-secondary);font-size:14px}
 .sidebar-row:hover,.sidebar-row:focus-within{background:var(--app-hover);color:var(--app-text)}
 .new-task{font-size:14px;font-weight:500;color:var(--app-text)}
-.sidebar-scroll{min-height:0;flex:1;overflow-y:auto;padding:16px 8px 8px;scrollbar-width:thin;scrollbar-color:var(--app-border-default) transparent}
-.projects-button{margin-bottom:8px;color:var(--app-text)}
+.sidebar-scroll{min-height:0;flex:1;overflow-y:auto;padding:8px 8px 8px;scrollbar-width:thin;scrollbar-color:var(--app-border-default) transparent}
+.projects-button{min-width:0;flex:1;color:var(--app-text)}
 .projects-button .icon-slot,.projects-button .icon-slot svg{width:16px;height:16px;min-width:16px}
 .thread-list{min-height:0;overflow:visible;padding:0;scrollbar-color:var(--app-border-default) transparent}
 .sidebar-project-group{display:flex;flex-direction:column;gap:1px}
@@ -895,11 +895,17 @@ body.sidebar-hidden .sidebar>div{opacity:0}
   .chat-drop-overlay:not([hidden]){display:flex;flex-direction:column}
   .chat-drop-overlay>[data-chat-drop=left],.chat-drop-overlay>[data-chat-drop=right]{display:none}
 }
-.project-repository-dialog { max-width: min(520px, 90vw); width: 100%; max-height: 80vh; color: inherit; background: var(--panel-bg, #222); border: 1px solid #666; border-radius: 12px; padding: 20px; }
+.project-repository-dialog { position: fixed; inset: 0; margin: auto; overflow: auto; max-width: min(520px, 90vw); width: 100%; max-height: 80vh; color: var(--app-text, #ececec); background: var(--app-panel, #222); border: 1px solid var(--app-border-default, #666); border-radius: 12px; padding: 20px; }
 .project-repository-dialog::backdrop { background: #0008; }
 .project-repository-dialog form { display: flex; flex-direction: column; gap: 10px; }
 .project-repository-dialog h2, .project-repository-dialog p { margin: 0; }
-.project-repository-dialog input { padding: 8px; }
+.project-repository-dialog input { width: 100%; min-width: 0; min-height: 40px; padding: 8px 12px; border: 1px solid var(--app-border-default, #666); border-radius: 8px; background: var(--app-main, #171717); color: var(--app-text, #ececec); }
+.project-repository-dialog input::placeholder { color: var(--app-text-secondary, #aaa); }
+.project-repository-dialog button { min-height: 36px; padding: 8px 12px; border: 1px solid var(--app-border-default, #666); border-radius: 8px; }
+.project-repository-dialog button:hover:not(:disabled) { background: var(--app-hover, #333); }
+.project-repository-dialog :is(input, button):focus-visible { outline: 2px solid var(--app-text, #ececec); outline-offset: 2px; }
+.project-repository-dialog .repo-error { overflow-wrap: anywhere; }
+.project-repository-dialog .repo-error:empty { display: none; }
 .repo-list { display: flex; flex-direction: column; max-height: 45vh; overflow-y: auto; gap: 4px; }
 .repo-list button { text-align: left; padding: 8px; }
 .repo-error { color: #f88; }
@@ -956,7 +962,7 @@ body.sidebar-hidden .sidebar>div{opacity:0}
 .sidebar-default-account-button{flex:0 0 30px;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--app-text-secondary);font-size:18px;cursor:pointer}.sidebar-default-account-button:hover,.sidebar-default-account-button:focus-visible{background:var(--app-hover);color:var(--app-text)}
 
 /* Per-account usage stays above the profile and scrolls independently. */
-.sidebar-usage{flex:0 1 auto;min-height:0;max-height:min(42vh,420px);overflow-y:auto;padding:6px 8px;display:grid;gap:7px;scrollbar-width:thin}
+.sidebar-usage-panel{flex:0 1 auto;min-height:0;display:flex;flex-direction:column}.sidebar-usage-panel:has(.sidebar-usage[hidden]){display:none}.sidebar-usage-panel summary{padding:6px 10px;color:var(--app-text-secondary);font-size:12px;cursor:pointer}.sidebar-usage{min-height:0;max-height:min(42vh,420px);overflow-y:auto;padding:6px 8px;display:grid;gap:7px;scrollbar-width:thin}
 .sidebar-usage[hidden]{display:none}
 .sidebar-usage-card{padding:10px;border:1px solid var(--app-border-default);border-radius:10px;background:var(--app-panel);color:var(--app-text-secondary);font-size:11px}
 .sidebar-usage-header,.sidebar-usage-window-heading{display:flex;justify-content:space-between;gap:8px;align-items:center}
@@ -1013,9 +1019,9 @@ body.sidebar-hidden .sidebar>div{opacity:0}
 
 .thread-context-menu{position:fixed;z-index:1000;min-width:190px;max-height:70vh;overflow:auto;padding:5px;border:1px solid var(--app-border-default);border-radius:8px;background:var(--surface-raised);box-shadow:0 8px 24px #0006}.thread-context-menu button{display:block;width:100%;padding:8px;border:0;border-radius:5px;text-align:left;background:transparent;color:var(--app-text);cursor:pointer}.thread-context-menu button:hover,.thread-context-menu button:focus{background:var(--app-hover)}.thread-menu-heading{padding:8px;color:var(--app-text-muted);font-size:12px}
 
-.activity-item.active .motion-fallback { animation: workspace-spin 1s linear infinite; }
+.activity-item.active .motion-fallback { animation: zilpio-spin 1s linear infinite; }
 .activity-group.waiting-approval .motion-fallback { animation-play-state: paused; }
-@keyframes workspace-spin { to { transform: rotate(360deg); } }
+@keyframes zilpio-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .activity-item.active .motion-fallback { animation: none; } }
 
 .codex-interface-mark img{width:100%;height:100%;object-fit:contain}
@@ -1024,3 +1030,29 @@ body.sidebar-hidden .sidebar>div{opacity:0}
 .mobile-settings-button{display:none}
 @media(max-width:720px){.mobile-settings-button{display:grid}}
 .mobile-device .mobile-settings-button{display:grid}
+
+.sidebar-git{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 4px 0;font-size:11px;color:var(--muted);min-width:0}
+.sidebar-git[hidden]{display:none}
+.sidebar-git-branch{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar-git-badges{display:flex;flex-wrap:wrap;gap:4px}
+.sidebar-git-badges span,.sidebar-git-badges button{padding:2px 5px;border-radius:4px;background:color-mix(in srgb,currentColor 12%,transparent)}
+
+.sidebar-git-badges .git-badge{border:0;font:inherit;line-height:inherit}
+.sidebar-git-badges .is-clean{color:#62b883}
+.sidebar-git-badges .git-badge-changes.has-count{color:#e4b55c}
+.sidebar-git-badges button.git-badge-changes{cursor:pointer}
+.sidebar-git-badges .git-badge-ahead.has-count{color:#76aef0;cursor:pointer}
+.sidebar-git-badges .git-badge-behind.has-count{color:#ef9275;cursor:pointer}
+.sidebar-git-badges button:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.git-pull-dialog{position:fixed;inset:0;margin:auto;max-height:calc(100dvh - 32px);overflow:auto;max-width:min(440px,calc(100vw - 32px));padding:20px;border:1px solid var(--border-strong);border-radius:12px;background:var(--app-bg, #242424);color:var(--text)}
+.git-pull-dialog::backdrop{background:#0009}
+.git-pull-dialog h2{margin:0;font-size:16px}.git-pull-dialog p{white-space:pre-wrap;overflow-wrap:anywhere}.git-pull-dialog [role=alert]{color:#ef9275}
+.git-pull-actions{display:flex;justify-content:flex-end;gap:8px}.git-pull-actions button{padding:7px 12px;border-radius:6px;background:#555;color:#fff}.git-pull-actions button:last-child{background:#3672bd}
+@keyframes git-pull-pulse{0%,100%{transform:scale(1)}50%{transform:scale(2)}}
+.sidebar-git-badges .git-badge-behind.has-count{display:inline-flex;transform-origin:center;animation:git-pull-pulse 2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){.sidebar-git-badges .git-badge-behind.has-count{animation:none}}
+
+.project-fetch-warning{flex-shrink:0;color:#ef9275;margin:0 4px;padding:0;border:0;background:transparent;font-size:14px;cursor:pointer;animation:git-pull-pulse 2s ease-in-out infinite}
+.project-fetch-warning:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.project-fetch-warning{animation:none}}
+.project-fetch-warning[hidden]{display:none}

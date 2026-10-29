@@ -5,7 +5,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { ensureSafeDirectory } from './thread-ownership.js';
 
-const migration = 'legacy-to-workspace-v1';
+const migration = 'el-to-zilpio-v1';
 const trees = ['sessions', 'archived_sessions', 'shell_snapshots'];
 const indexes = ['history.jsonl', 'session_index.jsonl'];
 const databaseName = /^(state|thread_history|goals|memories|queue)_\d+\.sqlite$/;
@@ -105,13 +105,13 @@ function mergeDatabase(source: string, target: string, sourceHome: string, targe
 }
 
 function retireElHistories(base: string) {
-  const sources = [join(base, '.legacy')], runtimeRoot = join(base, '.webui', 'runtime-homes');
+  const sources = [join(base, '.El')], runtimeRoot = join(base, '.webui', 'runtime-homes');
   if (present(runtimeRoot)) {
     ensureSafeDirectory(runtimeRoot);
     for (const account of readdirSync(runtimeRoot)) {
       if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(account)) throw new Error('Unsafe runtime account');
       ensureSafeDirectory(join(runtimeRoot, account));
-      sources.push(join(runtimeRoot, account, 'legacy'));
+      sources.push(join(runtimeRoot, account, 'El'));
     }
   }
   for (const source of sources) {
@@ -121,14 +121,14 @@ function retireElHistories(base: string) {
       if (trees.includes(name) || indexes.includes(name) || /\.sqlite(?:-wal|-shm)?$/.test(name)) rmSync(join(source, name), {recursive: true, force: true});
     }
   }
-  const oldProjects = join(base, '.webui', 'projects.json.legacy');
+  const oldProjects = join(base, '.webui', 'projects.json.El');
   if (present(oldProjects)) { regular(oldProjects); rmSync(oldProjects); }
 }
 
 // Run before starting any Codex processes. Each attempt stages and validates all
 // changes before installation. Original histories and metadata remain in backup.
 // A failed/interrupted attempt is safe to retry; the server never starts midway.
-export function migrateToWorkspace(base: string) {
+export function migrateToZilpio(base: string) {
   base = resolve(base);
   const state = join(base, '.webui'), directory = join(state, 'migrations', migration), complete = join(directory, 'complete.json');
   ensureSafeDirectory(state);
@@ -146,14 +146,14 @@ export function migrateToWorkspace(base: string) {
   }
   const attempt = join(directory, randomUUID()), backup = join(attempt, 'backup'), stage = join(attempt, 'stage');
   ensureSafeDirectory(backup); ensureSafeDirectory(stage);
-  const homes = [{source: join(base, '.legacy'), target: join(base, '.workspace'), key: 'main'}];
+  const homes = [{source: join(base, '.El'), target: join(base, '.zilpio'), key: 'main'}];
   const runtimeRoot = join(state, 'runtime-homes');
   if (present(runtimeRoot)) {
     ensureSafeDirectory(runtimeRoot);
     for (const account of readdirSync(runtimeRoot)) {
       if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/.test(account)) throw new Error('Unsafe runtime account');
       ensureSafeDirectory(join(runtimeRoot, account));
-      homes.push({source: join(runtimeRoot, account, 'legacy'), target: join(runtimeRoot, account, 'workspace'), key: account});
+      homes.push({source: join(runtimeRoot, account, 'El'), target: join(runtimeRoot, account, 'zilpio'), key: account});
     }
   }
   const plans: {source: string; target: string; staged: string; names: string[]}[] = [];
@@ -206,11 +206,11 @@ export function migrateToWorkspace(base: string) {
     }
     plans.push({...home, staged, names: files(staged)});
   }
-  const metadataNames = ['accounts.json', 'projects.json', 'projects.json.legacy', 'projects.json.workspace', 'thread-ownership.json', 'auto-reload.json'];
+  const metadataNames = ['accounts.json', 'projects.json', 'projects.json.El', 'projects.json.zilpio', 'thread-ownership.json', 'auto-reload.json'];
   for (const name of metadataNames) if (present(join(state, name))) { regular(join(state, name)); ensureSafeDirectory(join(backup, 'metadata')); copyFileSync(join(state, name), join(backup, 'metadata', name)); }
   const accounts = readJson(join(state, 'accounts.json'), null);
-  if (accounts?.workspaceId === 'legacy') accounts.workspaceId = 'workspace';
-  const sourceProjects = readJson(join(state, 'projects.json.legacy'), []), targetProjects = readJson(join(state, 'projects.json.workspace'), []), legacyProjects = readJson(join(state, 'projects.json'), []);
+  if (accounts?.workspaceId === 'El') accounts.workspaceId = 'zilpio';
+  const sourceProjects = readJson(join(state, 'projects.json.El'), []), targetProjects = readJson(join(state, 'projects.json.zilpio'), []), legacyProjects = readJson(join(state, 'projects.json'), []);
   if (![sourceProjects, targetProjects, legacyProjects].every(Array.isArray)) throw new Error('Invalid project metadata');
   const projects = new Map<string, any>();
   for (const project of [...legacyProjects, ...sourceProjects, ...targetProjects]) {
@@ -220,7 +220,7 @@ export function migrateToWorkspace(base: string) {
   }
   const ownership = readJson(join(state, 'thread-ownership.json'), {}), merged: Record<string, any> = {};
   for (const [key, value] of Object.entries(ownership)) {
-    const [environment, thread] = JSON.parse(key), destination = JSON.stringify([environment === 'legacy' ? 'workspace' : environment, thread]);
+    const [environment, thread] = JSON.parse(key), destination = JSON.stringify([environment === 'El' ? 'zilpio' : environment, thread]);
     if (Object.hasOwn(merged, destination) && !isDeepStrictEqual(merged[destination], value)) throw new Error(`Conflicting chat account ownership: ${thread}`);
     merged[destination] = value;
   }
@@ -229,9 +229,9 @@ export function migrateToWorkspace(base: string) {
     if (!Array.isArray(auto.records)) throw new Error('Invalid AutoReload metadata');
     const records = new Map<string, any>();
     // Process canonical records last if both environments contain the same ID.
-    for (const record of [...auto.records].sort((a, b) => Number(a.scope?.startsWith('["workspace"')) - Number(b.scope?.startsWith('["workspace"')))) {
+    for (const record of [...auto.records].sort((a, b) => Number(a.scope?.startsWith('["zilpio"')) - Number(b.scope?.startsWith('["zilpio"')))) {
       let scope; try { scope = JSON.parse(record.scope); } catch { scope = null; }
-      const next = Array.isArray(scope) && scope[0] === 'legacy' ? {...record, scope: JSON.stringify(['workspace', ...scope.slice(1)])} : record;
+      const next = Array.isArray(scope) && scope[0] === 'El' ? {...record, scope: JSON.stringify(['zilpio', ...scope.slice(1)])} : record;
       records.set(JSON.stringify([next.scope, next.threadId]), next);
     }
     auto.records = [...records.values()];
@@ -250,7 +250,7 @@ export function migrateToWorkspace(base: string) {
     atomic(destination, readFileSync(join(plan.staged, name)));
   }
   if (accounts) atomic(join(state, 'accounts.json'), JSON.stringify(accounts));
-  if (projects.size || sourceProjects.length || targetProjects.length || legacyProjects.length) atomic(join(state, 'projects.json.workspace'), JSON.stringify([...projects.values()]));
+  if (projects.size || sourceProjects.length || targetProjects.length || legacyProjects.length) atomic(join(state, 'projects.json.zilpio'), JSON.stringify([...projects.values()]));
   if (present(join(state, 'thread-ownership.json'))) atomic(join(state, 'thread-ownership.json'), JSON.stringify(merged));
   if (auto) atomic(join(state, 'auto-reload.json'), JSON.stringify(auto));
   const report = {migration, retiredAt: null as string | null, completedAt: new Date().toISOString(), backup, homes: plans.map(p => ({source: p.source, target: p.target})), projects: projects.size};

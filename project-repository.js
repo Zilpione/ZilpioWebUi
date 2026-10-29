@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { existsSync, lstatSync, mkdtempSync, readdirSync, renameSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, lstatSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 
 const run = promisify(execFile);
 const env = { ...process.env, GIT_TERMINAL_PROMPT: '0', GH_PROMPT_DISABLED: '1', GIT_LITERAL_PATHSPECS: '1' };
@@ -28,6 +28,14 @@ export async function repositoryChanges(path) {
  }
  return counts;
 }
+export async function repositorySync(path) {
+ const opts = { cwd: path, env: { ...env, GIT_OPTIONAL_LOCKS: '0' }, timeout: 5000 };
+ const { stdout } = await run('git', ['status', '--porcelain=v2', '--branch', '--untracked-files=no'], opts);
+ const head = stdout.match(/^# branch\.head (.+)$/m)?.[1];
+ const upstream = stdout.match(/^# branch\.upstream (.+)$/m)?.[1] || null;
+ const divergence = stdout.match(/^# branch\.ab \+(\d+) -(\d+)$/m);
+ return { branch: head === '(detached)' ? null : head, upstream, ahead: divergence ? Number(divergence[1]) : null, behind: divergence ? Number(divergence[2]) : null };
+}
 async function changeEntries(path) {
  const { stdout } = await run('git', ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--', '.'], { cwd: path, env, timeout: 5000, maxBuffer: 8 * 1024 * 1024 });
  const entries = stdout.split('\0'), files = [];
@@ -38,6 +46,29 @@ async function changeEntries(path) {
   files.push({ name, status, oldName });
  }
  return files;
+}
+export async function fetchRepository(path) {
+ const { stdout } = await run('git', ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{upstream}'], { cwd: path, env, timeout: 5000 });
+ const upstream = stdout.trim();
+ const branch = (await run('git', ['branch', '--show-current'], { cwd: path, env, timeout: 5000 })).stdout.trim();
+ const remote = (await run('git', ['config', '--get', `branch.${branch}.remote`], { cwd: path, env, timeout: 5000 })).stdout.trim();
+ if (!upstream || !remote || remote === '.') return;
+ await run('git', ['fetch', '--', remote], { cwd: path, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024 });
+}
+export async function pullRepository(path) {
+ try { await run('git', ['pull', '--ff-only'], { cwd: path, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024 }); }
+ catch (error) { throw new Error((error.stderr || '').trim() || 'Pull non riuscito. Controlla accesso e configurazione Git.'); }
+}
+export async function pushRepository(path) {
+ try {
+  const opts = { cwd: path, env, timeout: 5000 };
+  const branch = (await run('git', ['branch', '--show-current'], opts)).stdout.trim();
+  if (!branch) throw new Error('Branch non disponibile');
+  const remote = (await run('git', ['config', '--get', `branch.${branch}.remote`], opts)).stdout.trim();
+  const target = (await run('git', ['config', '--get', `branch.${branch}.merge`], opts)).stdout.trim();
+  if (!remote || remote === '.' || !target.startsWith('refs/heads/')) throw new Error('Upstream non valido');
+  await run('git', ['push', '--', remote, `HEAD:${target}`], { ...opts, timeout: 120000, maxBuffer: 8 * 1024 * 1024 });
+ } catch (error) { throw new Error((error.stderr || '').trim() || error.message || 'Push non riuscito'); }
 }
 export async function repositoryBranch(path) {
  const { stdout } = await command('git', ['branch', '--show-current'], path);
@@ -74,12 +105,16 @@ export async function discardRepositoryChange(path, name) {
   } else await command('git', ['restore', '--source=HEAD', '--staged', '--worktree', '--', file.name], path);
  }
 }
-export async function commitAndPush(path, message) {
+export async function commitRepository(path, message) {
  if (typeof message !== 'string' || !message.trim() || message.length > 1000) throw new Error('Inserisci un messaggio di commit valido.');
  await command('git', ['add', '--all', '--', '.'], path);
  await command('git', ['commit', '-m', message.trim(), '--', '.'], path);
+}
+export async function commitAndPush(path, message) {
+ await commitRepository(path, message);
  try { await command('git', ['push'], path); }
  catch { throw new Error('Commit creato, ma push non riuscito. Controlla il remote e riprova il push.'); }
+ try { await fetchRepository(path); } catch {}
 }
 async function command(bin, args, cwd) {
  try { return await run(bin, args, { cwd, env, timeout: 120000, maxBuffer: 8 * 1024 * 1024 }); }
@@ -112,16 +147,27 @@ export async function assignRepository(path, name, gh = 'gh') {
  const available = await listRepositories(gh);
  if (!available.some(repo => repo.name.toLowerCase() === name.toLowerCase())) throw new Error('Repository non accessibile');
  const populated = readdirSync(path).length > 0;
- const temp = mkdtempSync(join(dirname(path), '.webui-clone-'));
+ const metadata = JSON.parse((await command(gh, ['repo', 'view', name, '--json', 'url'], path)).stdout);
+ if (typeof metadata.url !== 'string' || !metadata.url) throw new Error('URL repository non disponibile');
+ const git = join(path, '.git');
+ mkdirSync(git); // Exclusive creation: never replace an existing repository.
  try {
-  await command(gh, ['repo', 'clone', name, temp], path);
-  let hasHistory = true; try { await command('git', ['rev-parse', '--verify', 'HEAD'], temp); } catch { hasHistory = false; }
-  if (populated && hasHistory) throw new Error('La cartella e il repository contengono già file. Gestisci il collegamento dalla chat per evitare sovrascritture.');
-  if (readdirSync(path).some(entry => entry === '.git') || (!populated && readdirSync(path).length)) throw new Error('La cartella è cambiata durante il clone. Riprova.');
-  if (populated) renameSync(join(temp,'.git'),join(path,'.git'));
-  else for (const entry of readdirSync(temp)) renameSync(join(temp,entry),join(path,entry));
-  return { populated, emptyRemote: populated };
- } finally { rmSync(temp,{recursive:true,force:true}); }
+  await command('git', ['init', '.'], path);
+  await command('git', ['remote', 'add', 'origin', metadata.url], path);
+  const { stdout } = await command('git', ['ls-remote', '--symref', 'origin', 'HEAD'], path);
+  const branch = stdout.match(/^ref: refs\/heads\/(.+)\tHEAD$/m)?.[1];
+  await command('git', ['fetch', 'origin'], path);
+  if (branch) {
+   await command('git', ['symbolic-ref', 'HEAD', `refs/heads/${branch}`], path);
+   // Populate only the index: local files must never be checked out or overwritten.
+   await command('git', ['reset', '--mixed', `refs/remotes/origin/${branch}`], path);
+   await command('git', ['branch', '--set-upstream-to', `origin/${branch}`], path);
+  } else if (stdout.trim()) throw new Error('Branch predefinito remoto non disponibile');
+  return { populated, emptyRemote: populated && !branch };
+ } catch (error) {
+  rmSync(git, { recursive: true, force: true });
+  throw error;
+ }
 }
 export async function pushInitial(path) {
  try { await command('git', ['rev-parse', '--verify', 'HEAD'], path); throw new Error('Il repository contiene già commit.'); } catch (error) { if (error.message === 'Il repository contiene già commit.') throw error; }
@@ -132,4 +178,5 @@ export async function pushInitial(path) {
  await command('git',['add','--all'],path);
  await command('git',['commit','-m','Initial commit'],path);
  await command('git',['push','-u','origin','HEAD'],path);
+ try { await fetchRepository(path); } catch {}
 }
