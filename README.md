@@ -1,4 +1,4 @@
-# Codex WebUI
+# ZilpioWebUi
 
 <p align="center">
   <strong>A local, LAN-accessible WebUI for the real Codex app-server.</strong>
@@ -20,7 +20,7 @@
 > [!IMPORTANT]
 > This is an **unofficial community project**. It is not affiliated with, endorsed by, or maintained by OpenAI. OpenAI and Codex are trademarks of their respective owners.
 
-Codex WebUI connects directly to `codex app-server --stdio` and exposes the local Codex experience through a responsive browser interface. It keeps real threads, models, streaming responses, tool activity, approval requests, diffs, and token usage instead of simulating them in a static frontend.
+ZilpioWebUi connects directly to `codex app-server --stdio` and exposes the local Codex experience through a responsive browser interface. It keeps real threads, models, streaming responses, tool activity, approval requests, diffs, and token usage instead of simulating them in a static frontend.
 
 
 ## Highlights
@@ -94,7 +94,7 @@ To listen on your LAN, start the server without an authentication variable:
 HOST=0.0.0.0 bun run start
 ```
 
-The first LAN browser sees a password setup screen. After a password of at least 12 characters is confirmed, Codex WebUI stores only a salted `scrypt` credential in `~/.codex/codex-webui-auth.json`, signs in that browser, and requires the password after a restart. Because the first reachable LAN client can claim this setup, complete it only on a trusted network.
+The first LAN browser sees a password setup screen. After a password of at least 12 characters is confirmed, ZilpioWebUi stores only a salted `scrypt` credential in `~/.codex/codex-webui-auth.json`, signs in that browser, and requires the password after a restart. Because the first reachable LAN client can claim this setup, complete it only on a trusted network.
 
 For unattended deployments, provide the password at startup instead:
 
@@ -140,7 +140,7 @@ bun run start
 
 ## Security model
 
-Codex WebUI can approve command execution and file changes on your machine. Treat it like a local developer tool with shell access.
+ZilpioWebUi can approve command execution and file changes on your machine. Treat it like a local developer tool with shell access.
 
 - Do **not** expose port `8899` directly to the public Internet.
 - The default listener is `127.0.0.1`. A non-localhost listener requires first-run password setup, `CODEX_WEBUI_PASSWORD`, or `CODEX_WEBUI_ACCESS_TOKEN` before protected HTTP and WebSocket requests are accepted.

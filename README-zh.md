@@ -1,4 +1,4 @@
-# Codex WebUI
+# ZilpioWebUi
 
 <p align="center">
   <strong>由真实 Codex app-server 驱动、可在局域网访问的本地 WebUI。</strong>
@@ -20,7 +20,7 @@
 > [!IMPORTANT]
 > 这是一个**非官方社区项目**，与 OpenAI 没有隶属、背书或维护关系。OpenAI、Codex 及相关标识归其各自权利人所有。
 
-Codex WebUI 直接连接 `codex app-server --stdio`，通过响应式浏览器界面提供本地 Codex 体验。模型列表、历史会话、流式回答、工具活动、审批请求、Diff 和 Token 使用量均来自真实 app-server，而不是前端静态模拟。
+ZilpioWebUi 直接连接 `codex app-server --stdio`，通过响应式浏览器界面提供本地 Codex 体验。模型列表、历史会话、流式回答、工具活动、审批请求、Diff 和 Token 使用量均来自真实 app-server，而不是前端静态模拟。
 
 
 ## 主要功能
@@ -85,7 +85,7 @@ http://127.0.0.1:8899
 HOST=0.0.0.0 bun run start
 ```
 
-首个通过局域网访问的浏览器会看到密码设置页。确认至少 12 个字符的密码后，Codex WebUI 只把加盐后的 `scrypt` 凭据保存在 `~/.codex/codex-webui-auth.json`，并立即登录当前浏览器；服务重启后会显示普通登录页。由于第一个可访问该地址的局域网客户端拥有初始化权，请只在可信网络中完成首次设置。
+首个通过局域网访问的浏览器会看到密码设置页。确认至少 12 个字符的密码后，ZilpioWebUi 只把加盐后的 `scrypt` 凭据保存在 `~/.codex/codex-webui-auth.json`，并立即登录当前浏览器；服务重启后会显示普通登录页。由于第一个可访问该地址的局域网客户端拥有初始化权，请只在可信网络中完成首次设置。
 
 无人值守部署也可以在启动时直接指定密码：
 
@@ -129,7 +129,7 @@ bun run start
 
 ## 安全模型
 
-Codex WebUI 可以在本机批准执行命令和修改文件，应把它视为拥有 Shell 能力的本地开发工具。
+ZilpioWebUi 可以在本机批准执行命令和修改文件，应把它视为拥有 Shell 能力的本地开发工具。
 
 - 不要把 `8899` 端口直接暴露到公网。
 - 默认只监听 `127.0.0.1`。监听非 localhost 地址时，必须先完成首次密码设置，或配置 `CODEX_WEBUI_PASSWORD` / `CODEX_WEBUI_ACCESS_TOKEN`，受保护的 HTTP 与 WebSocket 请求才会放行。
